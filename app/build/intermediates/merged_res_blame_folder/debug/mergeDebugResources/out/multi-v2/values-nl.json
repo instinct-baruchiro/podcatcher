@@ -1,0 +1,60 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.baruchiro.podcatcher.app-mergeDebugResources-18:/values-nl/values-nl.xml",
+            "map": [
+                {
+                    "source": "/downloads/gradle-home/caches/transforms-4/95bfd944e3a9b023aacdd5e69eb36501/transformed/media3-exoplayer-1.4.1/res/values-nl/values-nl.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9,10",
+                        "startColumns": "4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,126,190,254,321,398,467,556,639",
+                        "endColumns": "70,63,63,66,76,68,88,82,71",
+                        "endOffsets": "121,185,249,316,393,462,551,634,706"
+                    },
+                    "to": {
+                        "startLines": "20,21,22,23,24,25,26,27,28",
+                        "startColumns": "4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "1656,1727,1791,1855,1922,1999,2068,2157,2240",
+                        "endColumns": "70,63,63,66,76,68,88,82,71",
+                        "endOffsets": "1722,1786,1850,1917,1994,2063,2152,2235,2307"
+                    }
+                },
+                {
+                    "source": "/downloads/gradle-home/caches/transforms-4/b064285c2cb39ec91b0eea11b6919cd5/transformed/core-1.9.0/res/values-nl/values-nl.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "100",
+                        "endOffsets": "151"
+                    },
+                    "to": {
+                        "startLines": "35",
+                        "startColumns": "4",
+                        "startOffsets": "2820",
+                        "endColumns": "100",
+                        "endOffsets": "2916"
+                    }
+                },
+                {
+                    "source": "/downloads/gradle-home/caches/transforms-4/2f9cda94b633a3a83e454eb1023d8041/transformed/media3-session-1.4.1/res/values-nl/values-nl.xml",
+                    "from": {
+                        "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,137,234,310,417,515,605,700,800,897,974,1039,1139,1222,1319,1397,1488,1563,1656,1727,1797,1882,1968,2065",
+                        "endColumns": "81,96,75,106,97,89,94,99,96,76,64,99,82,96,77,90,74,92,70,69,84,85,96,98",
+                        "endOffsets": "132,229,305,412,510,600,695,795,892,969,1034,1134,1217,1314,1392,1483,1558,1651,1722,1792,1877,1963,2060,2159"
+                    },
+                    "to": {
+                        "startLines": "2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,29,30,31,32,33,34",
+                        "startColumns": "4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4",
+                        "startOffsets": "55,137,234,310,417,515,605,700,800,897,974,1039,1139,1222,1319,1397,1488,1563,2312,2383,2453,2538,2624,2721",
+                        "endColumns": "81,96,75,106,97,89,94,99,96,76,64,99,82,96,77,90,74,92,70,69,84,85,96,98",
+                        "endOffsets": "132,229,305,412,510,600,695,795,892,969,1034,1134,1217,1314,1392,1483,1558,1651,2378,2448,2533,2619,2716,2815"
+                    }
+                }
+            ]
+        }
+    ]
+}

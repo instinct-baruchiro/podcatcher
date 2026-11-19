@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">פודקאסטים</string>
+    <string-array name="keep_options">
+        <item>1</item>
+        <item>3</item>
+        <item>5</item>
+        <item>10</item>
+    </string-array>
+    <string-array name="speed_options">
+        <item>×1</item>
+        <item>×1.25</item>
+        <item>×1.5</item>
+        <item>×1.75</item>
+        <item>×2</item>
+    </string-array>
+    <string-array name="skip_options">
+        <item>ללא</item>
+        <item>15 שניות</item>
+        <item>30 שניות</item>
+        <item>60 שניות</item>
+    </string-array>
+</resources>
