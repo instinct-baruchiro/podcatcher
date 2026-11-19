@@ -60,11 +60,11 @@ class ScreenshotFlowTest {
 
     private fun res(id: String) = By.res(pkg, id)
 
-    /** PlaybackState{state=3} means STATE_PLAYING in dumpsys media_session. */
+    /** STATE_PLAYING in dumpsys media_session: prints as state=PLAYING(3) on API 34+, state=3 on older. */
     private fun mediaSessionDump(): String = device.executeShellCommand("dumpsys media_session")
 
     private fun isPlaying(dump: String): Boolean =
-        dump.contains(Regex("state=PlaybackState\\s*\\{[^}]*state=3"))
+        dump.contains(Regex("state=PlaybackState\\s*\\{[^}]*state=(?:PLAYING\\(3\\)|3)(?=[,}\\s])"))
 
     /** Polls playback state; on timeout writes dumpsys + logcat evidence into the shots dir. */
     private fun awaitPlaying(seconds: Int, tag: String): Boolean {
