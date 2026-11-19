@@ -191,10 +191,16 @@ class PodcastActivity : Activity() {
         listView.adapter = EpisodeAdapter()
     }
 
-    private fun formatDate(raw: String): String = try {
-        val parsed = ZonedDateTime.parse(raw.trim(), DateTimeFormatter.RFC_1123_DATE_TIME)
-        parsed.format(DateTimeFormatter.ofPattern("EEEE, d 'ב'MMMM yyyy", Locale("he")))
-    } catch (e: Exception) { raw }
+    private fun formatDate(raw: String): String {
+        val he = DateTimeFormatter.ofPattern("EEEE, d 'ב'MMMM yyyy", Locale("he"))
+        val s = raw.trim()
+        try {
+            return ZonedDateTime.parse(s, DateTimeFormatter.RFC_1123_DATE_TIME).format(he)
+        } catch (e: Exception) { /* try the feed's truncated form below */ }
+        return try {
+            java.time.LocalDate.parse(s, DateTimeFormatter.ofPattern("EEE, d MMM yyyy", Locale.ENGLISH)).format(he)
+        } catch (e: Exception) { raw }
+    }
 
     inner class EpisodeAdapter : BaseAdapter() {
         override fun getCount() = episodes.size
