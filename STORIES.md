@@ -192,3 +192,41 @@ honestly that no engine is attached. Playback intentionally stays
 button-driven (owner direction).
 
 <!-- @unimplemented -->
+## QUEUE-1 — Deterministic listening queue (future) and starvation hints
+
+As a listener, I want a listening queue built on clear deterministic rules —
+a priority order between podcasts and round-robin among podcasts of equal
+priority (the Podcast Addict model: "יש סדר עדיפויות... כל פעם ישמיע לי פרק
+מפודקאסט אחר במידה והם באותה עדיפות") — so that no podcast silently
+disappears from my listening the way it can in an opaque AI-chosen feed.
+
+Status: documented (owner direction, 2026-11-19). FUTURE experience, not
+current scope. There is no playback queue in the app today: playback is
+single-episode; the only rotation is the per-podcast keep-N download window.
+
+Recorded open choices (unresolved, not settled here):
+- Strict high-priority exhaustion vs. occasionally giving low-priority
+  podcasts a turn — owner has not decided.
+- His Spotify mechanism comments are his hypothesis, not verified fact.
+
+Future feature candidate (explicitly future, owner's words): a monthly
+reminder to re-ask the priority order ("פיצ'ר שמעלה מזכיר כל חודש שואל שאלה
+מחדש על סדר העדיפויות... פיצ'ר עתידי כי ברגע שיש סדר עדיפויות לא מאבדים
+פודקאסט והבעיה נעלמת מאליה").
+
+Recorded future challenge — starvation hints (owner voice, 2026-11-19):
+when high-priority podcasts keep refilling and crowd others out, that
+pattern is a HINT the app may use to ASK the user to re-plan — never to
+change rules on its own. His examples of what such a hint could suggest:
+download fewer episodes ("אולי להוריד פחות פרקים"), download only every
+second episode ("אולי להוריד רק כל פרק שני"), switch a podcast from
+automatic to manual download ("אולי להפוך מהורדה אוטומטית להורדה ידנית"),
+or interleave ratios ("אולי אתה רוצה כל שלושה פרקים כאלו לשים פרק אחד כזה").
+Owner: "לא הייתי נכנס לזה מיד" — recorded as a case, not to be built now.
+
+Acceptance (when scheduled):
+- Queue order follows explicit priority + round-robin rules the user can see.
+- Hints may only prompt a question to the user; rule changes require his
+  confirmation.
+
+<!-- @unimplemented -->
