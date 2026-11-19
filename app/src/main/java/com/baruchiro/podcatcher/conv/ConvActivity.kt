@@ -1,6 +1,7 @@
 package com.baruchiro.podcatcher.conv
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
@@ -34,9 +35,20 @@ class ConvActivity : Activity() {
     private lateinit var input: EditText
     private val scope = CoroutineScope(Dispatchers.Main)
 
+    private val prefs by lazy { getSharedPreferences("conv_config", MODE_PRIVATE) }
+
+    private fun configuredBackend(): ModelBackend {
+        val key = prefs.getString("gemini_key", null).orEmpty()
+        return if (key.isBlank()) NoBackend()
+        else GeminiBackend(
+            apiKey = key,
+            model = prefs.getString("gemini_model", "gemini-2.5-flash") ?: "gemini-2.5-flash"
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        backend = NoBackend()
+        backend = configuredBackend()
         lib = AndroidLibrary(this)
 
         val root = LinearLayout(this).apply {
@@ -50,8 +62,13 @@ class ConvActivity : Activity() {
         val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         input = EditText(this).apply { hint = "מה לשנות?"; id = R.id.convInput }
         val send = Button(this).apply { text = "שליחה"; id = R.id.convSend }
+        val gear = Button(this).apply {
+            text = "⚙"
+            setOnClickListener { showBackendDialog() }
+        }
         row.addView(input, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
         row.addView(send, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
+        row.addView(gear, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
         root.addView(row)
         setContentView(root)
 
@@ -68,6 +85,29 @@ class ConvActivity : Activity() {
         }
         messages.addView(tv, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         scroll.post { scroll.fullScroll(ScrollView.FOCUS_DOWN) }
+    }
+
+    private fun showBackendDialog() {
+        val pad = (20 * resources.displayMetrics.density).toInt()
+        val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(pad, pad, pad, 0) }
+        val keyField = EditText(this).apply { hint = "מפתח API (Gemini)"; setText(prefs.getString("gemini_key", "")) }
+        val modelField = EditText(this).apply { hint = "מודל"; setText(prefs.getString("gemini_model", "gemini-2.5-flash")) }
+        col.addView(TextView(this).apply { text = "המפתח נשמר במכשיר בלבד ומשמש רק לשיחה הזו." })
+        col.addView(keyField)
+        col.addView(modelField)
+        AlertDialog.Builder(this)
+            .setTitle("מנוע שיחה")
+            .setView(col)
+            .setPositiveButton("שמירה") { _, _ ->
+                prefs.edit()
+                    .putString("gemini_key", keyField.text.toString().trim())
+                    .putString("gemini_model", modelField.text.toString().trim().ifBlank { "gemini-2.5-flash" })
+                    .apply()
+                backend = configuredBackend()
+                bubble(if (keyField.text.isBlank()) "מנוע השיחה כבוי — נשארו התשובות הקבועות." else "מנוע השיחה חובר.", false)
+            }
+            .setNegativeButton("ביטול", null)
+            .show()
     }
 
     private fun onSend() {
