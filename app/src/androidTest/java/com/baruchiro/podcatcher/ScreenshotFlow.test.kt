@@ -43,9 +43,28 @@ class ScreenshotFlowTest {
     private fun res(id: String) = By.res(pkg, id)
 
     /** PlaybackState{state=3} means STATE_PLAYING in dumpsys media_session. */
-    private fun isPlaying(): Boolean =
-        device.executeShellCommand("dumpsys media_session")
-            .contains(Regex("state=PlaybackState\\s*\\{[^}]*state=3"))
+    private fun mediaSessionDump(): String = device.executeShellCommand("dumpsys media_session")
+
+    private fun isPlaying(dump: String): Boolean =
+        dump.contains(Regex("state=PlaybackState\\s*\\{[^}]*state=3"))
+
+    /** Polls playback state; on timeout writes dumpsys + logcat evidence into the shots dir. */
+    private fun awaitPlaying(seconds: Int, tag: String): Boolean {
+        var dump = ""
+        for (i in 1..seconds) {
+            Thread.sleep(1_000)
+            dump = mediaSessionDump()
+            if (isPlaying(dump)) return true
+        }
+        File(shotsDir, "dumpsys-media-session-$tag.txt").writeText(dump)
+        val logcat = device.executeShellCommand("logcat -d -t 400")
+            .lines()
+            .filter { it.contains("podcatcher", true) || it.contains("ExoPlayer", true) || it.contains("Media3", true) || it.contains("MediaSession", true) }
+            .joinToString("\n")
+        File(shotsDir, "logcat-$tag.txt").writeText(logcat)
+        shot("fail-$tag")
+        return false
+    }
 
     @Test
     fun subscribePlayAndDownload() {
@@ -83,13 +102,9 @@ class ScreenshotFlowTest {
 
         // Play the first episode and confirm real playback state.
         device.findObjects(res("play")).first().click()
-        var playing = false
-        for (i in 1..20) {
-            Thread.sleep(1_000)
-            if (isPlaying()) { playing = true; break }
-        }
-        assertTrue("player never reached STATE_PLAYING", playing)
+        val playing = awaitPlaying(45, "stream")
         shot("04-playing")
+        assertTrue("player never reached STATE_PLAYING", playing)
 
         // The media notification should be present in the shade.
         device.openNotification()
@@ -111,12 +126,8 @@ class ScreenshotFlowTest {
 
         // Play again now that the file is local; playback must still work.
         device.findObjects(res("play")).first().click()
-        var localPlaying = false
-        for (i in 1..20) {
-            Thread.sleep(1_000)
-            if (isPlaying()) { localPlaying = true; break }
-        }
-        assertTrue("local file playback never started", localPlaying)
+        val localPlaying = awaitPlaying(45, "local")
         shot("07-playing-downloaded")
+        assertTrue("local file playback never started", localPlaying)
     }
 }
