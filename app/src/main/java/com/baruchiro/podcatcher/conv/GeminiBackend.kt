@@ -15,7 +15,7 @@ import org.json.JSONObject
  */
 class GeminiBackend(
     private val apiKey: String,
-    private val model: String = "gemini-2.5-flash",
+    private val model: String = "gemini-3.1-flash-lite",
     private val baseUrl: String = "https://generativelanguage.googleapis.com/v1beta"
 ) : ModelBackend {
 

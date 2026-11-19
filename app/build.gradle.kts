@@ -46,6 +46,7 @@ dependencies {
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
     testImplementation("org.json:json:20231013")
     testImplementation("xmlpull:xmlpull:1.1.3.1")
+    testImplementation("org.robolectric:robolectric:4.12.2")
     testImplementation("net.sf.kxml:kxml2:2.3.0")
 
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

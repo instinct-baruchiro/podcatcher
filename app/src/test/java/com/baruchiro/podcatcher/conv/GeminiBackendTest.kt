@@ -31,7 +31,7 @@ class GeminiBackendTest {
     @Test
     fun `sends tool spec, history and key, returns model text`() = runBlocking {
         server.enqueue(geminiReply(JSONObject().put("say", "בסדר").toString()))
-        val backend = GeminiBackend("test-key", "gemini-2.5-flash", server.url("/v1beta").toString())
+        val backend = GeminiBackend("test-key", "gemini-3.1-flash-lite", server.url("/v1beta").toString())
 
         val out = backend.reply(
             listOf(ConvMessage(true, "הגבל כל פודקאסט ל-3 פרקים")),
@@ -40,7 +40,7 @@ class GeminiBackendTest {
         assertEquals("בסדר", JSONObject(out).getString("say"))
 
         val req = server.takeRequest()
-        assertTrue(req.path.orEmpty().contains("/v1beta/models/gemini-2.5-flash:generateContent"))
+        assertTrue(req.path.orEmpty().contains("/v1beta/models/gemini-3.1-flash-lite:generateContent"))
         assertEquals("test-key", req.getHeader("x-goog-api-key"))
         val body = JSONObject(req.body.readUtf8())
         val sys = body.getJSONObject("system_instruction").getJSONArray("parts").getJSONObject(0).getString("text")

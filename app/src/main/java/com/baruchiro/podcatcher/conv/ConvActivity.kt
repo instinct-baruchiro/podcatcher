@@ -42,7 +42,7 @@ class ConvActivity : Activity() {
         return if (key.isBlank()) NoBackend()
         else GeminiBackend(
             apiKey = key,
-            model = prefs.getString("gemini_model", "gemini-2.5-flash") ?: "gemini-2.5-flash"
+            model = prefs.getString("gemini_model", "gemini-3.1-flash-lite") ?: "gemini-3.1-flash-lite"
         )
     }
 
@@ -140,7 +140,7 @@ class ConvActivity : Activity() {
             setSingleLine(true)
         }
         val keyField = field("מפתח API (Gemini)", secrets.get("gemini_key") ?: "")
-        val modelField = field("מודל", prefs.getString("gemini_model", "gemini-2.5-flash") ?: "gemini-2.5-flash")
+        val modelField = field("מודל", prefs.getString("gemini_model", "gemini-3.1-flash-lite") ?: "gemini-3.1-flash-lite")
         col.addView(TextView(this).apply {
             text = "המפתח נשמר במכשיר בלבד ומשמש רק לשיחה הזו."
             setTextColor(getColor(R.color.textSecondary))
@@ -156,7 +156,7 @@ class ConvActivity : Activity() {
                 val newKey = keyField.text.toString().trim()
                 if (newKey.isBlank()) secrets.remove("gemini_key") else secrets.put("gemini_key", newKey)
                 prefs.edit()
-                    .putString("gemini_model", modelField.text.toString().trim().ifBlank { "gemini-2.5-flash" })
+                    .putString("gemini_model", modelField.text.toString().trim().ifBlank { "gemini-3.1-flash-lite" })
                     .apply()
                 backend = configuredBackend()
                 bubble(if (keyField.text.isBlank()) "מנוע השיחה כבוי — נשארו התשובות הקבועות." else "מנוע השיחה חובר.", false)
