@@ -101,7 +101,9 @@ class PodcastActivity : Activity() {
         loadEpisodes()
 
         val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
-        if (Build.VERSION.SDK_INT >= 33) registerReceiver(dlReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        // ACTION_DOWNLOAD_COMPLETE comes from the downloads provider app, not the
+        // system server, so NOT_EXPORTED would silently never receive it (API 33+).
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(dlReceiver, filter, Context.RECEIVER_EXPORTED)
         else registerReceiver(dlReceiver, filter)
     }
 
