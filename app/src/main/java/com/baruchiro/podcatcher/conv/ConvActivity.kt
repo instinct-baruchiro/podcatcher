@@ -36,9 +36,10 @@ class ConvActivity : Activity() {
     private val scope = CoroutineScope(Dispatchers.Main)
 
     private val prefs by lazy { getSharedPreferences("conv_config", MODE_PRIVATE) }
+    private val secrets by lazy { SecretStore(this) }
 
     private fun configuredBackend(): ModelBackend {
-        val key = prefs.getString("gemini_key", null).orEmpty()
+        val key = secrets.get("gemini_key").orEmpty()
         return if (key.isBlank()) NoBackend()
         else GeminiBackend(
             apiKey = key,
@@ -90,7 +91,7 @@ class ConvActivity : Activity() {
     private fun showBackendDialog() {
         val pad = (20 * resources.displayMetrics.density).toInt()
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(pad, pad, pad, 0) }
-        val keyField = EditText(this).apply { hint = "מפתח API (Gemini)"; setText(prefs.getString("gemini_key", "")) }
+        val keyField = EditText(this).apply { hint = "מפתח API (Gemini)"; setText(secrets.get("gemini_key") ?: "") }
         val modelField = EditText(this).apply { hint = "מודל"; setText(prefs.getString("gemini_model", "gemini-2.5-flash")) }
         col.addView(TextView(this).apply { text = "המפתח נשמר במכשיר בלבד ומשמש רק לשיחה הזו." })
         col.addView(keyField)
@@ -99,8 +100,9 @@ class ConvActivity : Activity() {
             .setTitle("מנוע שיחה")
             .setView(col)
             .setPositiveButton("שמירה") { _, _ ->
+                val newKey = keyField.text.toString().trim()
+                if (newKey.isBlank()) secrets.remove("gemini_key") else secrets.put("gemini_key", newKey)
                 prefs.edit()
-                    .putString("gemini_key", keyField.text.toString().trim())
                     .putString("gemini_model", modelField.text.toString().trim().ifBlank { "gemini-2.5-flash" })
                     .apply()
                 backend = configuredBackend()
