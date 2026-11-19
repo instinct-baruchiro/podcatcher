@@ -36,6 +36,15 @@ android {
     }
 }
 
+// The real-Gemini Robolectric slice is a MANUAL local check: it needs the
+// GEMINI_API_KEY env var and downloads Robolectric's android-all at runtime.
+// CI must not boot it (flake-prone, and it skips there anyway).
+tasks.withType<Test>().configureEach {
+    if (!project.hasProperty("realGemini")) {
+        exclude("**/RealGeminiRobolectricTest*")
+    }
+}
+
 dependencies {
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-session:1.4.1")
