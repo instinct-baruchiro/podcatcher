@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.LruCache
 import android.widget.ImageView
+import com.baruchiro.podcatcher.R
 import java.net.URL
 import java.util.concurrent.Executors
 
@@ -12,7 +13,7 @@ class ArtworkLoader {
     private val pool = Executors.newFixedThreadPool(2)
 
     fun into(view: ImageView, url: String) {
-        view.setImageDrawable(null)
+        view.setImageResource(R.drawable.ic_podcast)
         if (url.isEmpty()) return
         cache.get(url)?.let { view.setImageBitmap(it); return }
         view.tag = url

@@ -33,6 +33,9 @@ import com.baruchiro.podcatcher.net.Episode
 import com.baruchiro.podcatcher.player.PlayerService
 import com.google.common.util.concurrent.ListenableFuture
 import java.io.File
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import java.util.concurrent.Executors
 
 class PodcastActivity : Activity() {
@@ -188,6 +191,11 @@ class PodcastActivity : Activity() {
         listView.adapter = EpisodeAdapter()
     }
 
+    private fun formatDate(raw: String): String = try {
+        val parsed = ZonedDateTime.parse(raw.trim(), DateTimeFormatter.RFC_1123_DATE_TIME)
+        parsed.format(DateTimeFormatter.ofPattern("EEEE, d 'ב'MMMM yyyy", Locale("he")))
+    } catch (e: Exception) { raw }
+
     inner class EpisodeAdapter : BaseAdapter() {
         override fun getCount() = episodes.size
         override fun getItem(p: Int) = episodes[p]
@@ -196,7 +204,7 @@ class PodcastActivity : Activity() {
             val v = convert ?: layoutInflater.inflate(R.layout.row_episode, parent, false)
             val ep = episodes[p]
             v.findViewById<TextView>(R.id.title).text = ep.title
-            v.findViewById<TextView>(R.id.date).text = ep.date
+            v.findViewById<TextView>(R.id.date).text = formatDate(ep.date)
             v.findViewById<Button>(R.id.play).setOnClickListener { play(ep) }
             val dl = v.findViewById<Button>(R.id.download)
             val saved = Store.downloadedPath(this@PodcastActivity, feedUrl, ep.guid) != null

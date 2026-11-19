@@ -133,6 +133,8 @@ class ScreenshotFlowTest {
         assertNotNull("library list missing", list)
         val added = device.wait(Until.hasObject(By.res(pkg, "art")), 90_000)
         assertTrue("podcast did not appear in the library", added)
+        // Artwork loads asynchronously; let the tile settle before the shot.
+        Thread.sleep(3_000)
         shot("02-library-subscribed")
 
         // Open the podcast; episode rows carry a play button.

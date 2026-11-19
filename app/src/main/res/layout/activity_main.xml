@@ -43,7 +43,7 @@
             android:background="@drawable/bg_input"
             android:paddingStart="18dp"
             android:paddingEnd="18dp"
-            android:hint="שם פודקאסט או קישור לפיד"
+            android:hint="שם פודקאסט או קישור"
             android:singleLine="true"
             android:imeOptions="actionDone"
             android:inputType="textUri" />
