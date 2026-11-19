@@ -12,7 +12,9 @@ class PlayerService : MediaSessionService() {
 
     override fun onCreate() {
         super.onCreate()
-        val player = ExoPlayer.Builder(this).build()
+        val player = ExoPlayer.Builder(this)
+            .setAudioAttributes(androidx.media3.common.AudioAttributes.DEFAULT, /* handleAudioFocus= */ true)
+            .build()
         session = MediaSession.Builder(this, player).build()
     }
 

@@ -2,9 +2,13 @@ package com.baruchiro.podcatcher.ui
 
 import android.app.Activity
 import android.app.DownloadManager
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.os.Environment
 import android.view.View
@@ -41,6 +45,13 @@ class PodcastActivity : Activity() {
     private lateinit var listView: ListView
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var bindingPolicy = false
+
+    // Refresh episode rows when a system download completes.
+    private val dlReceiver = object : BroadcastReceiver() {
+        override fun onReceive(c: Context?, i: Intent?) {
+            if (::listView.isInitialized) listView.adapter = EpisodeAdapter()
+        }
+    }
     private val mainExecutor = java.util.concurrent.Executor { r -> android.os.Handler(android.os.Looper.getMainLooper()).post(r) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -88,10 +99,15 @@ class PodcastActivity : Activity() {
         skipSpinner.onItemSelectedListener = listener
 
         loadEpisodes()
+
+        val filter = IntentFilter(DownloadManager.ACTION_DOWNLOAD_COMPLETE)
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(dlReceiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        else registerReceiver(dlReceiver, filter)
     }
 
     override fun onDestroy() {
         controllerFuture?.let { MediaController.releaseFuture(it) }
+        unregisterReceiver(dlReceiver)
         super.onDestroy()
     }
 
@@ -128,15 +144,22 @@ class PodcastActivity : Activity() {
 
     private fun play(ep: Episode) {
         say("מתחבר לנגן…")
+        controllerFuture?.let { MediaController.releaseFuture(it) }
         val token = SessionToken(this, ComponentName(this, PlayerService::class.java))
         val future = MediaController.Builder(this, token).buildAsync()
         controllerFuture = future
         future.addListener({
             try {
                 val c = future.get()
-                val local = Store.downloadedPath(this, ep.guid)
+                val local = Store.downloadedPath(this, feedUrl, ep.guid)
                 val uri = local?.let { Uri.fromFile(File(it)) } ?: Uri.parse(ep.audioUrl)
-                c.setMediaItem(MediaItem.fromUri(uri), podcast.policy.skipIntroSec * 1000L)
+                val item = MediaItem.Builder().setUri(uri).setMediaMetadata(
+                    androidx.media3.common.MediaMetadata.Builder()
+                        .setTitle(ep.title)
+                        .setArtist(podcast.title)
+                        .build()
+                ).build()
+                c.setMediaItem(item, podcast.policy.skipIntroSec * 1000L)
                 c.setPlaybackSpeed(podcast.policy.speed.toFloat())
                 c.prepare()
                 c.play()
@@ -148,7 +171,7 @@ class PodcastActivity : Activity() {
     }
 
     private fun download(ep: Episode) {
-        if (Store.downloadedPath(this, ep.guid) != null) { say("הפרק כבר במכשיר."); return }
+        if (Store.downloadedPath(this, feedUrl, ep.guid) != null) { say("הפרק כבר במכשיר."); return }
         val dm = getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
         val dest = File(getExternalFilesDir(Environment.DIRECTORY_PODCASTS),
             ep.guid.filter { it.isLetterOrDigit() }.take(48) + ".mp3")
@@ -158,7 +181,7 @@ class PodcastActivity : Activity() {
                 .setDestinationUri(Uri.fromFile(dest))
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
         )
-        Store.setDownloaded(this, ep.guid, dest.absolutePath)
+        Store.setDownloaded(this, feedUrl, ep.guid, dest.absolutePath)
         say("מוריד: " + ep.title)
         listView.adapter = EpisodeAdapter()
     }
@@ -174,7 +197,7 @@ class PodcastActivity : Activity() {
             v.findViewById<TextView>(R.id.date).text = ep.date
             v.findViewById<Button>(R.id.play).setOnClickListener { play(ep) }
             val dl = v.findViewById<Button>(R.id.download)
-            val saved = Store.downloadedPath(this@PodcastActivity, ep.guid) != null
+            val saved = Store.downloadedPath(this@PodcastActivity, feedUrl, ep.guid) != null
             dl.text = if (saved) "במכשיר" else "הורדה"
             dl.isEnabled = !saved
             dl.setOnClickListener { download(ep) }

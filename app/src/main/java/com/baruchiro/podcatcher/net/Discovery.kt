@@ -1,6 +1,5 @@
 package com.baruchiro.podcatcher.net
 
-import android.util.Xml
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONObject
@@ -51,7 +50,7 @@ object Discovery {
             if (!it.isSuccessful) throw IOException("feed HTTP " + it.code)
             it.body?.string() ?: throw IOException("empty feed")
         }
-        val parser = Xml.newPullParser()
+        val parser = newParser()
         parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, false)
         parser.setInput(StringReader(xml))
 

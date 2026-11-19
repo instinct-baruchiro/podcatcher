@@ -95,15 +95,33 @@ object Store {
         savePodcasts(ctx, list)
     }
 
-    fun setDownloaded(ctx: Context, key: String, path: String) {
-        val o = JSONObject(prefs(ctx).getString("downloads", "{}") ?: "{}")
-        o.put(key, path)
-        prefs(ctx).edit().putString("downloads", o.toString()).apply()
+    private fun downloadsRoot(ctx: Context) = JSONObject(prefs(ctx).getString("downloads", "{}") ?: "{}")
+
+    fun setDownloaded(ctx: Context, feedUrl: String, key: String, path: String) {
+        val root = downloadsRoot(ctx)
+        val pod = root.optJSONObject(feedUrl) ?: JSONObject().also { root.put(feedUrl, it) }
+        pod.put(key, path)
+        prefs(ctx).edit().putString("downloads", root.toString()).apply()
     }
 
-    fun downloadedPath(ctx: Context, key: String): String? {
-        val o = JSONObject(prefs(ctx).getString("downloads", "{}") ?: "{}")
-        val p = o.optString(key)
-        return if (p.isNotEmpty() && File(p).exists()) p else null
+    fun downloadedPath(ctx: Context, feedUrl: String, key: String): String? {
+        val p = downloadsRoot(ctx).optJSONObject(feedUrl)?.optString(key) ?: return null
+        if (p.isEmpty()) return null
+        val f = File(p)
+        return if (f.exists() && f.length() > 0) p else null
+    }
+
+    // Enforces the keep-N policy: deletes files and mappings for episodes that
+    // are no longer within the podcast's newest keepGuids.
+    fun pruneDownloads(ctx: Context, feedUrl: String, keepGuids: Set<String>) {
+        val root = downloadsRoot(ctx)
+        val pod = root.optJSONObject(feedUrl) ?: return
+        val stale = pod.keys().asSequence().filterNot { it in keepGuids }.toList()
+        if (stale.isEmpty()) return
+        for (k in stale) {
+            runCatching { File(pod.getString(k)).delete() }
+            pod.remove(k)
+        }
+        prefs(ctx).edit().putString("downloads", root.toString()).apply()
     }
 }

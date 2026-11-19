@@ -33,12 +33,13 @@ class FeedRefreshWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, pa
             if (!p.policy.autoDownload) continue
             try {
                 val feed = Discovery.fetchFeed(p.feedUrl, p.policy.keep)
+                Store.pruneDownloads(ctx, p.feedUrl, feed.episodes.take(p.policy.keep).map { it.guid }.toSet())
                 val fresh = feed.episodes.takeWhile { it.guid != p.lastSeenGuid }
                 if (fresh.isEmpty()) continue
                 val dm = ctx.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
                 val dir = ctx.getExternalFilesDir(Environment.DIRECTORY_PODCASTS) ?: continue
                 for (ep in fresh.take(p.policy.keep)) {
-                    if (Store.downloadedPath(ctx, ep.guid) != null) continue
+                    if (Store.downloadedPath(ctx, p.feedUrl, ep.guid) != null) continue
                     val dest = File(dir, ep.guid.filter { it.isLetterOrDigit() }.take(48) + ".mp3")
                     dm.enqueue(
                         DownloadManager.Request(Uri.parse(ep.audioUrl))
@@ -46,7 +47,7 @@ class FeedRefreshWorker(ctx: Context, params: WorkerParameters) : Worker(ctx, pa
                             .setDestinationUri(Uri.fromFile(dest))
                             .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                     )
-                    Store.setDownloaded(ctx, ep.guid, dest.absolutePath)
+                    Store.setDownloaded(ctx, p.feedUrl, ep.guid, dest.absolutePath)
                     newCount++
                 }
                 Store.markSeen(ctx, p.feedUrl, feed.episodes.first().guid)
