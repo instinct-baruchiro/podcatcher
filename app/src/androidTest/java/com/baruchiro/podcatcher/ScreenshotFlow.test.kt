@@ -1,0 +1,122 @@
+// @story: SUB-1, LIB-1, PLAY-1, PLAY-2, DL-1, DL-2
+package com.baruchiro.podcatcher
+
+import android.content.Intent
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import androidx.test.platform.app.InstrumentationRegistry
+import androidx.test.uiautomator.By
+import androidx.test.uiautomator.UiDevice
+import androidx.test.uiautomator.Until
+import java.io.File
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+
+/**
+ * End-to-end flow on a real emulator/device, capturing a screenshot at each
+ * stage into the app-specific external files dir (pulled by CI as an
+ * artifact). Uses the live "עושים היסטוריה" feed, so it requires network.
+ */
+@RunWith(AndroidJUnit4::class)
+class ScreenshotFlowTest {
+
+    private val pkg = "com.baruchiro.podcatcher"
+    private val feedUrl = "https://www.ranlevi.com/feed/mh_network_feed"
+    private lateinit var device: UiDevice
+    private lateinit var shotsDir: File
+
+    @Before
+    fun setUp() {
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        device = UiDevice.getInstance(instrumentation)
+        shotsDir = File(instrumentation.targetContext.getExternalFilesDir(null), "shots")
+        shotsDir.mkdirs()
+    }
+
+    private fun shot(name: String) {
+        val out = File(shotsDir, "$name.png")
+        assertTrue("screenshot $name failed", device.takeScreenshot(out))
+    }
+
+    private fun res(id: String) = By.res(pkg, id)
+
+    /** PlaybackState{state=3} means STATE_PLAYING in dumpsys media_session. */
+    private fun isPlaying(): Boolean =
+        device.executeShellCommand("dumpsys media_session")
+            .contains(Regex("state=PlaybackState\\s*\\{[^}]*state=3"))
+
+    @Test
+    fun subscribePlayAndDownload() {
+        // Launch the app.
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val launch = context.packageManager.getLaunchIntentForPackage(pkg)!!
+            .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
+        context.startActivity(launch)
+        device.wait(Until.hasObject(By.pkg(pkg).depth(0)), 10_000)
+
+        // POST_NOTIFICATIONS dialog on API 33+ — allow so the media
+        // notification can appear.
+        device.wait(Until.hasObject(By.res("com.android.permissioncontroller:id/permission_allow_button")), 3_000)
+        device.findObject(By.res("com.android.permissioncontroller:id/permission_allow_button"))?.click()
+
+        device.wait(Until.hasObject(res("intake")), 10_000)
+        shot("01-library-empty")
+
+        // Subscribe by pasting the feed link.
+        device.findObject(res("intake")).text = feedUrl
+        device.findObject(res("go")).click()
+
+        // The library row appears once the feed is fetched (live network).
+        val list = device.wait(Until.findObject(res("podcasts")), 10_000)
+        assertNotNull("library list missing", list)
+        val added = device.wait(Until.hasObject(By.res(pkg, "art")), 90_000)
+        assertTrue("podcast did not appear in the library", added)
+        shot("02-library-subscribed")
+
+        // Open the podcast; episode rows carry a play button.
+        device.findObjects(By.res(pkg, "title")).first().click()
+        val hasPlay = device.wait(Until.hasObject(res("play")), 90_000)
+        assertTrue("episode list did not load", hasPlay)
+        shot("03-episodes")
+
+        // Play the first episode and confirm real playback state.
+        device.findObjects(res("play")).first().click()
+        var playing = false
+        for (i in 1..20) {
+            Thread.sleep(1_000)
+            if (isPlaying()) { playing = true; break }
+        }
+        assertTrue("player never reached STATE_PLAYING", playing)
+        shot("04-playing")
+
+        // The media notification should be present in the shade.
+        device.openNotification()
+        Thread.sleep(1_500)
+        shot("05-notification-shade")
+        device.pressBack()
+
+        // Download the first episode; the row flips to "במכשיר" only after the
+        // file is actually on disk (guarded by the download-complete receiver).
+        device.findObjects(res("download")).first().click()
+        var onDevice = false
+        for (i in 1..180) {
+            Thread.sleep(1_000)
+            val btn = device.findObjects(res("download")).firstOrNull()
+            if (btn != null && btn.text == "במכשיר") { onDevice = true; break }
+        }
+        assertTrue("download never completed on device", onDevice)
+        shot("06-downloaded")
+
+        // Play again now that the file is local; playback must still work.
+        device.findObjects(res("play")).first().click()
+        var localPlaying = false
+        for (i in 1..20) {
+            Thread.sleep(1_000)
+            if (isPlaying()) { localPlaying = true; break }
+        }
+        assertTrue("local file playback never started", localPlaying)
+        shot("07-playing-downloaded")
+    }
+}

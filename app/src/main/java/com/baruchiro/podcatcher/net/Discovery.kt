@@ -14,13 +14,16 @@ data class Episode(val title: String, val date: String, val audioUrl: String, va
 data class FeedInfo(val title: String, val author: String, val artwork: String, val episodes: List<Episode>)
 
 object Discovery {
+    // Overridable so unit tests can point search at a local mock server.
+    var searchBaseUrl = "https://itunes.apple.com/search"
+
     private val client = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
 
     fun search(query: String): List<SearchResult> {
-        val url = "https://itunes.apple.com/search?media=podcast&limit=8&term=" +
+        val url = "$searchBaseUrl?media=podcast&limit=8&term=" +
             URLEncoder.encode(query, "UTF-8")
         val body = client.newCall(Request.Builder().url(url).build()).execute().use {
             if (!it.isSuccessful) throw IOException("search HTTP " + it.code)
