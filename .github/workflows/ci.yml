@@ -57,15 +57,11 @@ jobs:
           api-level: 34
           arch: x86_64
           profile: pixel_6
-          script: |
-            FAILED=0
-            ./gradlew connectedDebugAndroidTest || FAILED=1
-            adb pull /storage/emulated/0/Android/data/com.baruchiro.podcatcher/files/shots screenshots || true
-            exit $FAILED
+          script: ./gradlew connectedDebugAndroidTest; FAILED=$?; adb pull /storage/emulated/0/Android/data/com.baruchiro.podcatcher/files/shots screenshots || true; exit $FAILED
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: emulator-screenshots
           path: screenshots/
-          if-no-files-found: warn
+          if-no-files-found: error
