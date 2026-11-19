@@ -2,7 +2,6 @@ package com.baruchiro.podcatcher.conv
 
 import android.app.Activity
 import android.app.AlertDialog
-import android.graphics.Color
 import android.os.Bundle
 import android.view.Gravity
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
@@ -47,6 +46,8 @@ class ConvActivity : Activity() {
         )
     }
 
+    private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         backend = configuredBackend()
@@ -56,46 +57,98 @@ class ConvActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             layoutDirection = LinearLayout.LAYOUT_DIRECTION_RTL
         }
-        messages = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+
+        // Header: title + engine settings.
+        val header = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(dp(20), dp(16), dp(20), dp(12))
+        }
+        header.addView(TextView(this).apply {
+            text = "שיחה"
+            textSize = 24f
+            setTextColor(getColor(R.color.textPrimary))
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+        }, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        val gear = Button(this).apply {
+            text = "⚙"
+            setTextColor(getColor(R.color.accent))
+            background = getDrawable(R.drawable.bg_button_tonal)
+            minWidth = 0; minimumWidth = 0; minHeight = 0; minimumHeight = 0
+            setPadding(dp(14), dp(8), dp(14), dp(8))
+            setOnClickListener { showBackendDialog() }
+        }
+        header.addView(gear)
+        root.addView(header)
+
+        messages = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(4), dp(16), dp(12))
+        }
         scroll = ScrollView(this).apply { addView(messages) }
         root.addView(scroll, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
 
-        val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
-        input = EditText(this).apply { hint = "מה לשנות?"; id = R.id.convInput }
-        val send = Button(this).apply { text = "שליחה"; id = R.id.convSend }
-        val gear = Button(this).apply {
-            text = "⚙"
-            setOnClickListener { showBackendDialog() }
+        // Bottom input bar.
+        val row = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = getDrawable(R.drawable.bg_bottom_bar)
+            setPadding(dp(12), dp(10), dp(12), dp(10))
         }
-        row.addView(input, LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        input = EditText(this).apply {
+            hint = "מה לשנות?"
+            id = R.id.convInput
+            background = getDrawable(R.drawable.bg_input)
+            setPadding(dp(18), 0, dp(18), 0)
+            setSingleLine(true)
+        }
+        val send = Button(this).apply { text = "שליחה"; id = R.id.convSend }
+        row.addView(input, LinearLayout.LayoutParams(0, dp(48), 1f).apply { marginEnd = dp(10) })
         row.addView(send, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
-        row.addView(gear, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT))
         root.addView(row)
         setContentView(root)
 
         send.setOnClickListener { onSend() }
+        bubble("ספרי לי מה לשנות בהגדרות — למשל כמה פרקים לשמור או באיזה קצב לנגן.", false)
     }
 
     private fun bubble(text: String, fromUser: Boolean) {
         val tv = TextView(this).apply {
             this.text = text
             textSize = 16f
-            setPadding(24, 16, 24, 16)
-            setBackgroundColor(if (fromUser) 0xFFE3F2FD.toInt() else Color.TRANSPARENT)
-            gravity = if (fromUser) Gravity.START else Gravity.END
+            setPadding(dp(16), dp(11), dp(16), dp(11))
+            background = getDrawable(if (fromUser) R.drawable.bg_bubble_user else R.drawable.bg_bubble_app)
+            setTextColor(getColor(if (fromUser) R.color.onAccent else R.color.textPrimary))
+            maxWidth = (resources.displayMetrics.widthPixels * 0.8).toInt()
         }
-        messages.addView(tv, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        val lp = LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply {
+            gravity = if (fromUser) Gravity.START else Gravity.END
+            bottomMargin = dp(10)
+        }
+        messages.addView(tv, lp)
         scroll.post { scroll.fullScroll(ScrollView.FOCUS_DOWN) }
     }
 
     private fun showBackendDialog() {
-        val pad = (20 * resources.displayMetrics.density).toInt()
+        val pad = dp(20)
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(pad, pad, pad, 0) }
-        val keyField = EditText(this).apply { hint = "מפתח API (Gemini)"; setText(secrets.get("gemini_key") ?: "") }
-        val modelField = EditText(this).apply { hint = "מודל"; setText(prefs.getString("gemini_model", "gemini-2.5-flash")) }
-        col.addView(TextView(this).apply { text = "המפתח נשמר במכשיר בלבד ומשמש רק לשיחה הזו." })
-        col.addView(keyField)
-        col.addView(modelField)
+        fun field(hintText: String, value: String) = EditText(this).apply {
+            hint = hintText
+            setText(value)
+            background = getDrawable(R.drawable.bg_input)
+            setPadding(dp(16), 0, dp(16), 0)
+            setSingleLine(true)
+        }
+        val keyField = field("מפתח API (Gemini)", secrets.get("gemini_key") ?: "")
+        val modelField = field("מודל", prefs.getString("gemini_model", "gemini-2.5-flash") ?: "gemini-2.5-flash")
+        col.addView(TextView(this).apply {
+            text = "המפתח נשמר במכשיר בלבד ומשמש רק לשיחה הזו."
+            setTextColor(getColor(R.color.textSecondary))
+            textSize = 13f
+            setPadding(0, 0, 0, dp(12))
+        })
+        col.addView(keyField, LinearLayout.LayoutParams(MATCH_PARENT, dp(48)).apply { bottomMargin = dp(10) })
+        col.addView(modelField, LinearLayout.LayoutParams(MATCH_PARENT, dp(48)))
         AlertDialog.Builder(this)
             .setTitle("מנוע שיחה")
             .setView(col)

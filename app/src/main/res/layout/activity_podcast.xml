@@ -9,79 +9,133 @@
     <LinearLayout
         android:orientation="horizontal"
         android:gravity="center_vertical"
+        android:background="@drawable/bg_card_static"
+        android:padding="16dp"
+        android:layout_marginBottom="12dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
         <ImageView
             android:id="@+id/art"
-            android:layout_width="56dp"
-            android:layout_height="56dp"
-            android:layout_marginStart="10dp"
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:layout_marginEnd="14dp"
+            android:background="@drawable/bg_art"
+            android:clipToOutline="true"
+            android:scaleType="centerCrop"
             android:contentDescription="" />
 
         <TextView
             android:id="@+id/ptitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textSize="20sp"
-            android:textStyle="bold" />
+            android:textColor="@color/textPrimary"
+            android:textSize="19sp"
+            android:textStyle="bold"
+            android:maxLines="2"
+            android:ellipsize="end" />
     </LinearLayout>
 
-    <CheckBox
-        android:id="@+id/autoCheck"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="הורדה אוטומטית של פרקים חדשים" />
-
     <LinearLayout
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
+        android:orientation="vertical"
+        android:background="@drawable/bg_card_static"
+        android:padding="16dp"
+        android:layout_marginBottom="12dp"
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
         <TextView
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="כמה לשמור: " />
+            style="@style/PodSection"
+            android:layout_marginBottom="6dp"
+            android:text="הגדרות" />
 
-        <Spinner
-            android:id="@+id/keepSpinner"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
-
-        <TextView
-            android:layout_width="wrap_content"
+        <CheckBox
+            android:id="@+id/autoCheck"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="קצב: " />
+            android:textColor="@color/textPrimary"
+            android:textSize="15sp"
+            android:text="הורדה אוטומטית של פרקים חדשים" />
 
-        <Spinner
-            android:id="@+id/speedSpinner"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+        <LinearLayout
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginTop="6dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="16dp"
-            android:text="דילוג פתיח: " />
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:textColor="@color/textPrimary"
+                android:textSize="15sp"
+                android:text="כמה לשמור" />
 
-        <Spinner
-            android:id="@+id/skipSpinner"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+            <Spinner
+                android:id="@+id/keepSpinner"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:textColor="@color/textPrimary"
+                android:textSize="15sp"
+                android:text="קצב ניגון" />
+
+            <Spinner
+                android:id="@+id/speedSpinner"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_weight="1"
+                android:layout_height="wrap_content"
+                android:textColor="@color/textPrimary"
+                android:textSize="15sp"
+                android:text="דילוג פתיח" />
+
+            <Spinner
+                android:id="@+id/skipSpinner"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+        </LinearLayout>
     </LinearLayout>
 
     <TextView
         android:id="@+id/status"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingTop="8dp"
+        android:textColor="@color/textSecondary"
+        android:textSize="14sp"
         android:paddingBottom="8dp"
         android:visibility="gone" />
 
     <ListView
         android:id="@+id/episodes"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent"
+        android:divider="@null"
+        android:dividerHeight="12dp"
+        android:listSelector="@android:color/transparent"
+        android:clipToPadding="false" />
 </LinearLayout>
