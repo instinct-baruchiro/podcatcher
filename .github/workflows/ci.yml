@@ -57,7 +57,7 @@ jobs:
           api-level: 34
           arch: x86_64
           profile: pixel_6
-          script: ./gradlew connectedDebugAndroidTest; FAILED=$?; adb pull /data/local/tmp/podcatcher-shots screenshots || true; exit $FAILED
+          script: ./gradlew connectedDebugAndroidTest; FAILED=$?; mkdir -p screenshots; adb exec-out "run-as com.baruchiro.podcatcher tar -cf - -C /storage/emulated/0/Android/data/com.baruchiro.podcatcher/files shots" > shots.tar; tar -xf shots.tar -C screenshots || true || true; exit $FAILED
       - name: Upload screenshots
         if: always()
         uses: actions/upload-artifact@v4
