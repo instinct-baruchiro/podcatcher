@@ -1,8 +1,11 @@
 // @story: SUB-1, LIB-1, PLAY-1, PLAY-2, DL-1, DL-2
 package com.baruchiro.podcatcher
 
+import android.app.DownloadManager
 import android.content.ContentValues
+import android.content.Context
 import android.content.Intent
+import android.os.Environment
 import android.provider.MediaStore
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -45,6 +48,26 @@ class ScreenshotFlowTest {
         val out = File(shotsDir, "$name.png")
         assertTrue("screenshot $name failed", device.takeScreenshot(out))
         publish(out)
+    }
+
+    /** On download timeout: DownloadManager status/reason/progress + file listing as artifact evidence. */
+    private fun dumpDownloadState() {
+        val sb = StringBuilder()
+        val dir = appContext.getExternalFilesDir(Environment.DIRECTORY_PODCASTS)
+        sb.append("files: ").append(dir?.listFiles()?.joinToString { "${it.name} ${it.length()}B" } ?: "none").append('\n')
+        val dm = appContext.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+        val c = dm.query(DownloadManager.Query())
+        while (c.moveToNext()) {
+            val status = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_STATUS))
+            val reason = c.getInt(c.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON))
+            val soFar = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_BYTES_DOWNLOADED_SO_FAR))
+            val total = c.getLong(c.getColumnIndexOrThrow(DownloadManager.COLUMN_TOTAL_SIZE_BYTES))
+            val uri = c.getString(c.getColumnIndexOrThrow(DownloadManager.COLUMN_URI))
+            sb.append("status=$status reason=$reason soFar=$soFar total=$total uri=$uri\n")
+        }
+        c.close()
+        File(shotsDir, "download-status.txt").also { it.writeText(sb.toString()); publish(it) }
+        shot("fail-download")
     }
 
     private fun publish(f: File) {
@@ -139,6 +162,7 @@ class ScreenshotFlowTest {
             val btn = device.findObjects(res("download")).firstOrNull()
             if (btn != null && btn.text == "במכשיר") { onDevice = true; break }
         }
+        if (!onDevice) dumpDownloadState()
         assertTrue("download never completed on device", onDevice)
         shot("06-downloaded")
 
