@@ -1,7 +1,9 @@
 // @story: SUB-1, LIB-1, PLAY-1, PLAY-2, DL-1, DL-2
 package com.baruchiro.podcatcher
 
+import android.content.ContentValues
 import android.content.Intent
+import android.provider.MediaStore
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
@@ -25,21 +27,35 @@ class ScreenshotFlowTest {
     private val pkg = "com.baruchiro.podcatcher"
     private val feedUrl = "https://www.ranlevi.com/feed/mh_network_feed"
     private lateinit var device: UiDevice
+    private lateinit var appContext: android.content.Context
     private lateinit var shotsDir: File
 
     @Before
     fun setUp() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         device = UiDevice.getInstance(instrumentation)
-        // App-private external dir: writable by the app; CI pulls it via run-as tar
-        // (the adb shell user itself cannot see Android/data on API 30+).
-        shotsDir = File(instrumentation.targetContext.getExternalFilesDir(null), "shots")
+        // Screenshots land app-private, then get published to Downloads via
+        // MediaStore so CI can adb pull them (shell cannot see Android/data).
+        appContext = instrumentation.targetContext
+        shotsDir = File(appContext.getExternalFilesDir(null), "shots")
         shotsDir.mkdirs()
     }
 
     private fun shot(name: String) {
         val out = File(shotsDir, "$name.png")
         assertTrue("screenshot $name failed", device.takeScreenshot(out))
+        publish(out)
+    }
+
+    private fun publish(f: File) {
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, f.name)
+            put(MediaStore.Downloads.RELATIVE_PATH, "Download/podcatcher-shots")
+            put(MediaStore.Downloads.MIME_TYPE, if (f.name.endsWith(".png")) "image/png" else "text/plain")
+        }
+        val uri = appContext.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+        assertNotNull("MediaStore insert failed for ${f.name}", uri)
+        appContext.contentResolver.openOutputStream(uri!!)!!.use { it.write(f.readBytes()) }
     }
 
     private fun res(id: String) = By.res(pkg, id)
@@ -58,12 +74,12 @@ class ScreenshotFlowTest {
             dump = mediaSessionDump()
             if (isPlaying(dump)) return true
         }
-        File(shotsDir, "dumpsys-media-session-$tag.txt").writeText(dump)
+        File(shotsDir, "dumpsys-media-session-$tag.txt").also { it.writeText(dump); publish(it) }
         val logcat = device.executeShellCommand("logcat -d -t 400")
             .lines()
             .filter { it.contains("podcatcher", true) || it.contains("ExoPlayer", true) || it.contains("Media3", true) || it.contains("MediaSession", true) }
             .joinToString("\n")
-        File(shotsDir, "logcat-$tag.txt").writeText(logcat)
+        File(shotsDir, "logcat-$tag.txt").also { it.writeText(logcat); publish(it) }
         shot("fail-$tag")
         return false
     }
