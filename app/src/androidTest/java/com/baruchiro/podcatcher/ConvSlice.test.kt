@@ -21,6 +21,7 @@ import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.After
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -52,6 +53,15 @@ class ConvSliceTest {
         shotsDir = File(appContext.getExternalFilesDir(null), "shots").apply { mkdirs() }
         Store.removePodcast(appContext, feedUrl)
         Store.addPodcast(appContext, Podcast(feedUrl, "פודקאסט בדיקה", "", "", Policy()))
+    }
+
+    @After
+    fun tearDown() {
+        // Leave the shared on-device Store exactly as found: other instrumented
+        // tests (ScreenshotFlowTest) run in the same app storage and must not
+        // see this seeded podcast or the changed default policy.
+        Store.removePodcast(appContext, feedUrl)
+        Store.setDefaultPolicy(appContext, Policy())
     }
 
     private fun shot(name: String) {
