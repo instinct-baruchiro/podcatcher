@@ -95,6 +95,26 @@ object Store {
         savePodcasts(ctx, list)
     }
 
+    /** Default policy applied to new subscriptions (SET-1 global defaults). */
+    fun defaultPolicy(ctx: Context): Policy {
+        val o = JSONObject(prefs(ctx).getString("default_policy", "{}") ?: "{}")
+        return Policy(
+            autoDownload = o.optBoolean("autoDownload", false),
+            keep = o.optInt("keep", 3),
+            speed = o.optDouble("speed", 1.0),
+            skipIntroSec = o.optInt("skipIntroSec", 0)
+        )
+    }
+
+    fun setDefaultPolicy(ctx: Context, p: Policy) {
+        prefs(ctx).edit().putString("default_policy", JSONObject()
+            .put("autoDownload", p.autoDownload)
+            .put("keep", p.keep)
+            .put("speed", p.speed)
+            .put("skipIntroSec", p.skipIntroSec)
+            .toString()).apply()
+    }
+
     private fun downloadsRoot(ctx: Context) = JSONObject(prefs(ctx).getString("downloads", "{}") ?: "{}")
 
     fun setDownloaded(ctx: Context, feedUrl: String, key: String, path: String) {

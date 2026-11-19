@@ -182,7 +182,13 @@ podcast-domain tools and knowledge — so that it changes the app's behavior
 and settings for me. The conversation drives the app's own settings and
 actions; it does not discuss episode content.
 
-Status: documented (owner direction, 2026-11-19). Not built; model backend
-not yet chosen.
+Status: partially implemented (2026-11-19). Built: conversation screen, the
+podcast-domain tool layer (list/search/subscribe/get_policy/set_policy incl.
+global defaults) and the deterministic executor — JVM-tested via a TESTS-ONLY
+stub backend that proves the model-reply→settings wire. Not built: a real
+model backend (owner's choice: his Hermes endpoint, on-device model, or a
+paid API — none authorized/connected yet), so the shipped screen answers
+honestly that no engine is attached. Playback intentionally stays
+button-driven (owner direction).
 
 <!-- @unimplemented -->

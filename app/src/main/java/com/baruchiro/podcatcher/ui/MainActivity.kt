@@ -35,6 +35,9 @@ class MainActivity : Activity() {
         status = findViewById(R.id.status)
         listView = findViewById(R.id.podcasts)
         findViewById<Button>(R.id.go).setOnClickListener { intake() }
+        findViewById<Button>(R.id.convOpen).setOnClickListener {
+            startActivity(Intent(this, com.baruchiro.podcatcher.conv.ConvActivity::class.java))
+        }
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {

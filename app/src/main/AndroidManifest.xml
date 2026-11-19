@@ -24,6 +24,8 @@
 
         <activity android:name=".ui.PodcastActivity" android:exported="false" />
 
+        <activity android:name=".conv.ConvActivity" android:exported="false" />
+
         <service
             android:name=".player.PlayerService"
             android:foregroundServiceType="mediaPlayback"
