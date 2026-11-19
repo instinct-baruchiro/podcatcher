@@ -31,10 +31,10 @@ class ScreenshotFlowTest {
     fun setUp() {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         device = UiDevice.getInstance(instrumentation)
-        // /data/local/tmp: visible to both the instrumentation process and adb pull
-        // (app-private external dirs are hidden from the shell user on API 30+).
-        device.executeShellCommand("mkdir -p /data/local/tmp/podcatcher-shots && chmod 777 /data/local/tmp/podcatcher-shots")
-        shotsDir = File("/data/local/tmp/podcatcher-shots")
+        // App-private external dir: writable by the app; CI pulls it via run-as tar
+        // (the adb shell user itself cannot see Android/data on API 30+).
+        shotsDir = File(instrumentation.targetContext.getExternalFilesDir(null), "shots")
+        shotsDir.mkdirs()
     }
 
     private fun shot(name: String) {
