@@ -11,8 +11,8 @@ android {
         applicationId = "com.baruchiro.podcatcher.next"
         minSdk = 26
         targetSdk = 34
-        versionCode = 3
-        versionName = "0.3-trial-chat"
+        versionCode = 4
+        versionName = "0.4-trial-chat"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

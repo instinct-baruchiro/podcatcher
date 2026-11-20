@@ -32,15 +32,21 @@ class OnboardingFlowTest {
         Store.setDefaultPolicy(ctx, com.baruchiro.podcatcher.data.Policy())
 
         ctx.startActivity(ctx.packageManager.getLaunchIntentForPackage(pkg)!!.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK))
-        val done = device.wait(Until.findObject(By.res(pkg, "onboardDone")), 15_000)
-        assertNotNull("first-run chat missing", done)
+        // The drawer opens on the lead (the default rules), not on the checkbox below it.
+        assertNotNull("default rules not shown at the top of the first-run chat",
+            device.wait(Until.findObject(By.textContains("ברירת מחדל לפודקאסט חדש")), 15_000))
+        shot(device, ctx, "onb-1b-defaults")
+        // The stats choice sits below the lead: scroll down to it.
+        var done = device.findObject(By.res(pkg, "onboardDone"))
+        repeat(4) {
+            if (done == null) {
+                device.findObject(By.scrollable(true))?.scroll(androidx.test.uiautomator.Direction.DOWN, 1.0f)
+                done = device.wait(Until.findObject(By.res(pkg, "onboardDone")), 2_000)
+            }
+        }
+        assertNotNull("first-run chat missing its Done button", done)
         shot(device, ctx, "onb-1-stats")
         assertTrue("stats choice must be preselected", device.findObject(By.res(pkg, "onboardStats")).isChecked)
-        // The first bubble (default rules) sits above in the drawer: scroll up to it.
-        device.findObject(By.scrollable(true))?.scroll(androidx.test.uiautomator.Direction.UP, 1.0f)
-        shot(device, ctx, "onb-1b-defaults")
-        assertNotNull("default rules not shown", device.wait(Until.findObject(By.textContains("ברירת מחדל לפודקאסט חדש")), 5_000))
-        device.findObject(By.scrollable(true))?.scroll(androidx.test.uiautomator.Direction.DOWN, 1.0f)
         // Nothing is chosen for the listener: the default rules are unchanged, and nothing is recorded before Done.
         assertEquals(com.baruchiro.podcatcher.data.Policy(), Store.defaultPolicy(ctx))
         assertTrue(!ctx.getSharedPreferences("telemetry", Context.MODE_PRIVATE).contains("analytics_enabled"))
