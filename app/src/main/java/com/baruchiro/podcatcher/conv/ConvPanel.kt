@@ -170,7 +170,18 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
             ". בכל הרשמה אראה מה הוחל, ואפשר לשנות לפודקאסט אחד בלבד. מנויים קיימים לא משתנים.", false)
         askStats()
         // Open on the lead (the default rules), not on the checkbox at the bottom.
-        post { setExpanded(true); scroll.post { scroll.scrollTo(0, 0) } }
+        post {
+            setExpanded(true)
+            // Wait for the first real layout of the opened drawer: earlier posted scroll-to-bottom
+            // calls ran before it was laid out, and left the lead above the fold.
+            scroll.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    if (scroll.height == 0 || messages.height == 0) return
+                    scroll.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                    scroll.post { scroll.scrollTo(0, 0) }
+                }
+            })
+        }
         return true
     }
 
