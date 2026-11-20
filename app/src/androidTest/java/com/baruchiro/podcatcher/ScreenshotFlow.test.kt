@@ -181,8 +181,11 @@ class ScreenshotFlowTest {
         var onDevice = false
         for (i in 1..180) {
             Thread.sleep(1_000)
-            val btn = device.findObjects(res("download")).firstOrNull()
-            if (btn != null && btn.contentDescription == "במכשיר") { onDevice = true; break }
+            // The row is rebound while the download progresses; a stale handle just means "look again".
+            val done = try {
+                device.findObjects(res("download")).firstOrNull()?.contentDescription == "במכשיר"
+            } catch (e: androidx.test.uiautomator.StaleObjectException) { false }
+            if (done) { onDevice = true; break }
         }
         if (!onDevice) dumpDownloadState()
         assertTrue("download never completed on device", onDevice)
