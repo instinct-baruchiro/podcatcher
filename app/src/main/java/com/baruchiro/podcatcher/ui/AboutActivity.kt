@@ -47,9 +47,9 @@ class AboutActivity : Activity() {
         }
 
         text("סטטיסטיקות שימוש", R.style.PodSection)
-        text("נשלחים אירועים אנונימיים בלבד, כמו פתיחת האפליקציה והוספת פודקאסט. אף פעם לא תוכן שיחות או שמות פרקים.")
+        text("נשלחים אירועי שימוש כלליים, כמו פתיחת האפליקציה והוספת פודקאסט, יחד עם מזהה אקראי של ההתקנה הזו. לא נשלח תוכן שיחות או שמות פרקים. שירות הניתוח (PostHog) עשוי לשמור גם כתובת IP ומיקום משוער. אפשר לכבות בכל עת.")
         col.addView(CheckBox(this).apply {
-            text = "שליחת סטטיסטיקות שימוש אנונימיות"
+            text = "שליחת אירועי שימוש"
             setTextColor(getColor(R.color.textPrimary))
             id = R.id.analyticsSwitch
             isChecked = analytics?.enabled ?: false

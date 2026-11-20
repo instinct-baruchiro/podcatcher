@@ -39,7 +39,7 @@ class TelemetryTest {
     }
 
     @Test
-    fun `analytics sends anonymous events only while switched on`() {
+    fun `analytics sends events without person profiles only while switched on`() {
         MockWebServer().use { server ->
             server.start()
             val analytics = Analytics(MemPrefs(), server.url("/e").toString(), "phc_test", "0.1", "debug")

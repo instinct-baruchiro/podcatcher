@@ -10,9 +10,9 @@ import java.util.UUID
 import java.util.concurrent.Executors
 
 /**
- * REL-1 usage analytics: anonymous, events only (names plus coarse properties, never
+ * REL-1 usage analytics: events only (names plus coarse properties, never
  * conversation text or episode content), sent to the owner's existing PostHog project
- * with its public write-only project token. No person profiles, no identify call.
+ * with its public write-only project token. A random per-install id, no person profiles, no identify call. The provider may still store IP and geolocation server-side.
  * The listener can switch it off in the About screen.
  */
 class Analytics(

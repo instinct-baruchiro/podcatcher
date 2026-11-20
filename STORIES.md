@@ -247,7 +247,7 @@ Acceptance:
 Owner voice, 2026-11-20 09:36 and 10:21: conditions for publishing the app, and
 a credit (About) screen showing he built it.
 
-Status: built and tested on the client side. Anonymous usage events go to the
+Status: built and tested on the client side. Usage events (random per-install id) go to the
 owner's PostHog project (events only, no person profiles, user switch in
 About, off under test runs). The About screen credits Baruch Odem. The
 conversation notice, consent and delete client exist but store nothing: no
