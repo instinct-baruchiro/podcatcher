@@ -78,10 +78,9 @@ dependencies {
 }
 
 // THROWAWAY update check
-tasks.matching { it.name == "connectedDebugAndroidTest" }.configureEach {
-    finalizedBy(tasks.register<Exec>("updCheck") {
-        isIgnoreExitValue = true
-        workingDir = rootDir
-        commandLine("bash", ".github/scripts/upd.sh")
-    })
+val updCheck = tasks.register<Exec>("updCheck") {
+    isIgnoreExitValue = true
+    workingDir = rootDir
+    commandLine("bash", ".github/scripts/upd.sh")
 }
+tasks.matching { it.name == "connectedDebugAndroidTest" }.configureEach { finalizedBy(updCheck) }
