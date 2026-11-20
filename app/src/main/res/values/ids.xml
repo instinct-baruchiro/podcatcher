@@ -2,4 +2,5 @@
 <resources>
     <item name="convInput" type="id" />
     <item name="convSend" type="id" />
+    <item name="queuePlay" type="id" />
 </resources>

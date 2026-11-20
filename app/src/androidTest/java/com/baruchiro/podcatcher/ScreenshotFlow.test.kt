@@ -1,4 +1,4 @@
-// @story: SUB-1, LIB-1, PLAY-1, PLAY-2, DL-1, DL-2
+// @story: SUB-1, LIB-1, PLAY-1, PLAY-2, DL-1, DL-2, QUEUE-1
 package com.baruchiro.podcatcher
 
 import android.app.DownloadManager
@@ -193,5 +193,23 @@ class ScreenshotFlowTest {
         val localPlaying = awaitPlaying(45, "local")
         shot("07-playing-downloaded")
         assertTrue("local file playback never started", localPlaying)
+
+        // QUEUE-1: the queue screen plays the podcast's unplayed episodes one after another.
+        device.pressBack()
+        device.wait(Until.hasObject(res("queueOpen")), 5_000)
+        device.findObject(res("queueOpen")).click()
+        assertTrue("queue screen did not open", device.wait(Until.hasObject(By.text("תור ההאזנה")), 5_000))
+        assertTrue("queue has no episodes", device.wait(Until.hasObject(By.textStartsWith("1. ")), 60_000))
+        shot("08-queue")
+        device.findObject(res("queuePlay")).click()
+        assertTrue("queue playback never started", awaitPlaying(45, "queue"))
+        val queueSize = Regex("queue=.*?size=(\\d+)").find(mediaSessionDump())?.groupValues?.get(1)?.toInt() ?: 0
+        assertTrue("session queue has $queueSize items, expected several", queueSize > 1)
+        val before = mediaSessionDump().substringAfter("metadata:").lineSequence().first()
+        device.executeShellCommand("input keyevent KEYCODE_MEDIA_NEXT")
+        Thread.sleep(3_000)
+        val after = mediaSessionDump().substringAfter("metadata:").lineSequence().first()
+        assertTrue("next did not move to the following episode", before != after)
+        shot("09-queue-next")
     }
 }

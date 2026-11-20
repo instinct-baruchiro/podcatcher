@@ -23,7 +23,7 @@ class AndroidLibrary(private val ctx: Context) : Library {
     override fun applyPolicy(feedUrl: String?, patch: PolicyPatch): Pod? {
         if (feedUrl == null) {
             val cur = Store.defaultPolicy(ctx)
-            Store.setDefaultPolicy(ctx, Policy(
+            Store.setDefaultPolicy(ctx, cur.copy(
                 autoDownload = patch.autoDownload ?: cur.autoDownload,
                 keep = patch.keep ?: cur.keep,
                 speed = patch.speed ?: cur.speed,
@@ -33,7 +33,7 @@ class AndroidLibrary(private val ctx: Context) : Library {
         }
         val pod = Store.podcasts(ctx).firstOrNull { it.feedUrl == feedUrl } ?: return null
         val p = pod.policy
-        Store.updatePolicy(ctx, feedUrl, Policy(
+        Store.updatePolicy(ctx, feedUrl, p.copy(
             autoDownload = patch.autoDownload ?: p.autoDownload,
             keep = patch.keep ?: p.keep,
             speed = patch.speed ?: p.speed,

@@ -75,6 +75,8 @@ class PodcastActivity : Activity() {
         bindingPolicy = true
         val autoCheck = findViewById<CheckBox>(R.id.autoCheck)
         autoCheck.isChecked = podcast.policy.autoDownload
+        val oldestCheck = findViewById<CheckBox>(R.id.oldestCheck)
+        oldestCheck.isChecked = podcast.policy.oldestFirst
         val keepSpinner = findViewById<Spinner>(R.id.keepSpinner)
         val speedSpinner = findViewById<Spinner>(R.id.speedSpinner)
         val skipSpinner = findViewById<Spinner>(R.id.skipSpinner)
@@ -88,6 +90,9 @@ class PodcastActivity : Activity() {
 
         autoCheck.setOnCheckedChangeListener { _, checked ->
             if (!bindingPolicy) savePolicy(autoDownload = checked)
+        }
+        oldestCheck.setOnCheckedChangeListener { _, checked ->
+            if (!bindingPolicy) savePolicy(oldestFirst = checked)
         }
         val listener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, pos: Int, id: Long) {
@@ -128,8 +133,10 @@ class PodcastActivity : Activity() {
         autoDownload: Boolean = podcast.policy.autoDownload,
         keep: Int = podcast.policy.keep,
         speed: Double = podcast.policy.speed,
-        skipIntroSec: Int = podcast.policy.skipIntroSec
+        skipIntroSec: Int = podcast.policy.skipIntroSec,
+        oldestFirst: Boolean = podcast.policy.oldestFirst
     ) {
+        podcast.policy.oldestFirst = oldestFirst
         podcast.policy.autoDownload = autoDownload
         podcast.policy.keep = keep
         podcast.policy.speed = speed
@@ -166,7 +173,7 @@ class PodcastActivity : Activity() {
                 val c = future.get()
                 val local = Store.downloadedPath(this, feedUrl, ep.guid)
                 val uri = local?.let { Uri.fromFile(File(it)) } ?: Uri.parse(ep.audioUrl)
-                val item = MediaItem.Builder().setUri(uri).setMediaMetadata(
+                val item = MediaItem.Builder().setUri(uri).setMediaId(feedUrl + "\n" + ep.guid).setMediaMetadata(
                     androidx.media3.common.MediaMetadata.Builder()
                         .setTitle(ep.title)
                         .setArtist(podcast.title)
