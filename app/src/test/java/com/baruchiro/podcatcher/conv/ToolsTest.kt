@@ -141,6 +141,8 @@ class ToolsTest {
         val reply = turn(lib, "הירשמי לפודקאסט בקישור הזה")
         assertTrue(lib.subscribed.contains("https://c.example/feed"))
         assertTrue(reply.contains("נרשמת"))
+        // The confirmation states the rules actually stored for the new podcast, not only that it subscribed.
+        assertTrue(reply, reply.contains("שמירת 3 פרקים") && reply.contains("ללא הורדה אוטומטית"))
     }
 
     @Test

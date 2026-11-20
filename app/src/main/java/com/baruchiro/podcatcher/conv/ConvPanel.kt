@@ -1,6 +1,8 @@
 package com.baruchiro.podcatcher.conv
 
+import com.baruchiro.podcatcher.telemetry.Analytics
 import com.baruchiro.podcatcher.telemetry.ConversationLog
+import com.baruchiro.podcatcher.data.Store
 
 import android.app.Activity
 import android.app.AlertDialog
@@ -153,7 +155,75 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
         // With the keyboard up there is no room for the page and the drawer
         // together: the conversation takes the whole area above the keyboard.
         activity.window.decorView.viewTreeObserver.addOnGlobalLayoutListener { applyKeyboardMode() }
-        bubble("ספרי לי מה לשנות בהגדרות — למשל כמה פרקים לשמור או באיזה קצב לנגן.", false)
+        if (!maybeOnboard()) bubble("ספרי לי מה לשנות בהגדרות — למשל כמה פרקים לשמור או באיזה קצב לנגן.", false)
+    }
+
+    // ---- First-run chat: asks the download/retention defaults and the usage-stats choice, then summarises what it stored. ----
+
+    private fun maybeOnboard(): Boolean {
+        val due = !prefs.getBoolean("onboarding_done", false) &&
+            (!Analytics.runningUnderTest() || prefs.getBoolean("onboarding_force", false))
+        if (!due) return false
+        bubble("היי, לפני שמתחילים: שלוש שאלות קצרות על ברירות המחדל. אפשר לשנות הכל אחר כך כאן בשיחה, או באודות.", false)
+        post { setExpanded(true) }
+        choice("1. פרקים חדשים יירדו אוטומטית?", listOf("כן, אוטומטית" to true, "לא, רק כשאבקש" to false)) { auto ->
+            choice("2. כמה פרקים לשמור מכל פודקאסט?", listOf("1" to 1, "3" to 3, "5" to 5, "10" to 10)) { keep ->
+                askStats(auto, keep)
+            }
+        }
+        return true
+    }
+
+    private fun post(r: () -> Unit) { host.post { r() } }
+
+    private fun <T> choice(question: String, options: List<Pair<String, T>>, onPick: (T) -> Unit) {
+        bubble(question, false)
+        val row = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL; layoutDirection = View.LAYOUT_DIRECTION_RTL }
+        options.forEach { (label, value) ->
+            row.addView(android.widget.Button(activity, null, 0, R.style.PodButton).apply {
+                text = label
+                setOnClickListener {
+                    (0 until row.childCount).forEach { row.getChildAt(it).isEnabled = false }
+                    bubble(label, true)
+                    onPick(value)
+                }
+            }, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { marginEnd = dp(8) })
+        }
+        messages.addView(row, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.END; bottomMargin = dp(10) })
+        scroll.post { scroll.fullScroll(ScrollView.FOCUS_DOWN) }
+    }
+
+    private fun askStats(auto: Boolean, keep: Int) {
+        val analytics = Analytics.get(activity)
+        // A choice the listener already made (either way) is kept, never overwritten by the new default.
+        val initial = analytics.enabled
+        bubble("3. סטטיסטיקות שימוש: נשלחים אירועים כלליים (כמו פתיחת האפליקציה והוספת פודקאסט) עם מזהה אקראי של ההתקנה. לא נשלח תוכן שיחות או שמות פרקים. שירות הניתוח (PostHog) עשוי לשמור גם כתובת IP ומיקום משוער. מסומן כברירת מחדל; אפשר לבטל כאן, או באודות בכל עת.", false)
+        val box = android.widget.CheckBox(activity).apply {
+            text = "שליחת אירועי שימוש"
+            id = R.id.onboardStats
+            isChecked = initial
+            setTextColor(activity.getColor(R.color.textPrimary))
+        }
+        val done = android.widget.Button(activity, null, 0, R.style.PodButton).apply { text = "סיום"; id = R.id.onboardDone }
+        val col = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL; layoutDirection = View.LAYOUT_DIRECTION_RTL
+            addView(box); addView(done) }
+        done.setOnClickListener {
+            box.isEnabled = false; done.isEnabled = false
+            val p = Store.defaultPolicy(activity)
+            p.autoDownload = auto
+            p.keep = keep
+            Store.setDefaultPolicy(activity, p)
+            analytics.enabled = box.isChecked
+            prefs.edit().putBoolean("onboarding_done", true).apply()
+            bubble(
+                "הגדרתי: " + (if (auto) "הורדה אוטומטית של פרקים חדשים" else "ללא הורדה אוטומטית") +
+                    ", שמירת $keep פרקים מכל פודקאסט, סטטיסטיקות שימוש " + (if (box.isChecked) "מופעלות" else "כבויות") +
+                    ". זה חל על פודקאסטים שתוסיף מעכשיו; מנויים קיימים נשארים כמו שהם. אפשר לשנות בכל רגע, למשל: \"שמור 5 פרקים\".",
+                false
+            )
+        }
+        messages.addView(col, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.END; bottomMargin = dp(10) })
+        scroll.post { scroll.fullScroll(ScrollView.FOCUS_DOWN) }
     }
 
     private fun drawerParams(keyboardOpen: Boolean) =

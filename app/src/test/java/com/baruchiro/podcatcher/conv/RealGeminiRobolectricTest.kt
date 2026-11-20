@@ -63,4 +63,37 @@ class RealGeminiRobolectricTest {
         Store.removePodcast(c2, feedUrl)
         Store.setDefaultPolicy(c2, Policy())
     }
+
+    /** Owner's flow: name search, pick 1, subscribe. The confirmation must state the rules actually stored. */
+    @Test
+    fun subscribeFlow_confirmationStatesStoredRules() = runBlocking {
+        val key = System.getenv("GEMINI_API_KEY")
+        if (key.isNullOrBlank()) {
+            println("SKIP: GEMINI_API_KEY not set (expected on CI)")
+            return@runBlocking
+        }
+        val c = RuntimeEnvironment.getApplication()
+        Store.setDefaultPolicy(c, Policy())
+        val backend = GeminiBackend(apiKey = key, model = "gemini-3.1-flash-lite")
+        val lib = AndroidLibrary(c)
+        val history = mutableListOf<ConvMessage>()
+        val evidence = StringBuilder()
+        var last = ""
+        for (user in listOf("הוסף פודקאסט מסילת ישרים הרב הלל", "1")) {
+            history.add(ConvMessage(true, user))
+            val raw = backend.reply(history, Tools.SPEC)
+            last = Tools.execute(JSONObject(raw), lib)
+            history.add(ConvMessage(false, last))
+            evidence.append("USER: $user\nMODEL_RAW: $raw\nCONFIRMATION: $last\n")
+        }
+        val stored = Store.podcasts(c).firstOrNull()
+        evidence.append("STORED: " + (stored?.let { "keep=${it.policy.keep} auto=${it.policy.autoDownload} prio=${it.policy.priority}" } ?: "none") + "\n")
+        java.io.File("build/real-gemini-subscribe-evidence.txt").writeText(evidence.toString(), Charsets.UTF_8)
+        assertTrue("no subscription was stored", stored != null)
+        assertTrue("confirmation must state the keep rule, got: $last", last.contains("שמירת ${stored!!.policy.keep} פרקים"))
+        assertTrue("confirmation must state the download rule, got: $last",
+            last.contains(if (stored.policy.autoDownload) "הורדה אוטומטית" else "ללא הורדה אוטומטית"))
+        Store.removePodcast(c, stored.feedUrl)
+        Store.setDefaultPolicy(c, Policy())
+    }
 }

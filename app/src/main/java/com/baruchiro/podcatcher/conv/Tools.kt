@@ -94,7 +94,12 @@ object Tools {
     private fun subscribe(lib: Library, feedUrl: String): String {
         if (!feedUrl.startsWith("http")) return "כדי להירשם אני צריכה קישור פיד מלא."
         return try {
-            "נרשמת ל'${lib.subscribeByUrl(feedUrl)}'."
+            val title = lib.subscribeByUrl(feedUrl)
+            val rules = lib.get(feedUrl)?.let {
+                policyLine(PolicyPatch(it.autoDownload, it.keep, it.speed, it.skipIntroSec, it.priority, it.oldestFirst))
+            }
+            // Read back from the store, never from the model's words: the listener sees the rules actually in force.
+            "נרשמת ל'$title'." + (rules?.let { "\nהגדרות ההורדה והתור בפועל: $it. אפשר לשנות כאן בשיחה." } ?: "")
         } catch (e: Exception) {
             "ההרשמה נכשלה: לא הצלחתי לקרוא את הפיד."
         }
