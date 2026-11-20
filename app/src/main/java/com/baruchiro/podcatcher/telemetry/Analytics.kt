@@ -13,7 +13,7 @@ import java.util.concurrent.Executors
  * REL-1 usage analytics: events only (names plus coarse properties, never
  * conversation text or episode content), sent to the owner's existing PostHog project
  * with its public write-only project token. A random per-install id, no person profiles, no identify call. The provider may still store IP and geolocation server-side.
- * The listener can switch it off in the About screen.
+ * Off by default; the listener can switch it on or off in the About screen.
  */
 class Analytics(
     private val prefs: android.content.SharedPreferences,
@@ -26,14 +26,14 @@ class Analytics(
     private val io = Executors.newSingleThreadExecutor()
 
     var enabled: Boolean
-        get() = prefs.getBoolean(KEY_ENABLED, true)
+        get() = prefs.getBoolean(KEY_ENABLED, false)
         set(v) { prefs.edit().putBoolean(KEY_ENABLED, v).apply() }
 
     private fun installId(): String =
         prefs.getString(KEY_ID, null) ?: UUID.randomUUID().toString().also { prefs.edit().putString(KEY_ID, it).apply() }
 
     fun capture(event: String, props: Map<String, Any> = emptyMap()) {
-        if (!enabled) return
+        if (!enabled || endpoint.isBlank()) return
         val body = JSONObject()
             .put("api_key", token)
             .put("event", event)
@@ -66,12 +66,12 @@ class Analytics(
 
         @Volatile private var shared: Analytics? = null
 
-        /** Process-wide instance; null under instrumented tests so CI never sends real events. */
-        fun get(ctx: Context): Analytics? {
-            if (underTest()) return null
+        /** Process-wide instance; under instrumented tests it has no endpoint, so CI never sends real events. */
+        fun get(ctx: Context): Analytics {
             return shared ?: synchronized(this) {
                 shared ?: Analytics(
                     ctx.applicationContext.getSharedPreferences("telemetry", Context.MODE_PRIVATE),
+                    endpoint = if (underTest()) "" else ENDPOINT,
                     version = ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "?",
                     build = if (ctx.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) "debug" else "release"
                 ).also { shared = it }

@@ -44,7 +44,7 @@ class TelemetryTest {
             server.start()
             val analytics = Analytics(MemPrefs(), server.url("/e").toString(), "phc_test", "0.1", "debug")
 
-            analytics.enabled = false
+            assertFalse("analytics must start off", analytics.enabled)
             analytics.capture("podcatcher_app_open")
             analytics.flush()
             assertEquals(0, server.requestCount)

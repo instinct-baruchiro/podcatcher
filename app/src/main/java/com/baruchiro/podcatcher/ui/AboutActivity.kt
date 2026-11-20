@@ -47,14 +47,13 @@ class AboutActivity : Activity() {
         }
 
         text("סטטיסטיקות שימוש", R.style.PodSection)
-        text("נשלחים אירועי שימוש כלליים, כמו פתיחת האפליקציה והוספת פודקאסט, יחד עם מזהה אקראי של ההתקנה הזו. לא נשלח תוכן שיחות או שמות פרקים. שירות הניתוח (PostHog) עשוי לשמור גם כתובת IP ומיקום משוער. אפשר לכבות בכל עת.")
+        text("נשלחים אירועי שימוש כלליים, כמו פתיחת האפליקציה והוספת פודקאסט, יחד עם מזהה אקראי של ההתקנה הזו. לא נשלח תוכן שיחות או שמות פרקים. שירות הניתוח (PostHog) עשוי לשמור גם כתובת IP ומיקום משוער. השליחה כבויה כברירת מחדל, ואפשר להפעיל ולכבות בכל עת.")
         col.addView(CheckBox(this).apply {
             text = "שליחת אירועי שימוש"
             setTextColor(getColor(R.color.textPrimary))
             id = R.id.analyticsSwitch
-            isChecked = analytics?.enabled ?: false
-            isEnabled = analytics != null
-            setOnCheckedChangeListener { _, on -> analytics?.enabled = on }
+            isChecked = analytics.enabled
+            setOnCheckedChangeListener { _, on -> analytics.enabled = on }
         })
 
         text("שיחות", R.style.PodSection)
@@ -74,6 +73,6 @@ class AboutActivity : Activity() {
         }
 
         setContentView(ScrollView(this).apply { addView(col) })
-        analytics?.capture("podcatcher_about_open")
+        analytics.capture("podcatcher_about_open")
     }
 }

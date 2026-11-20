@@ -44,7 +44,7 @@ class MainActivity : Activity() {
         findViewById<ImageButton>(R.id.aboutOpen).setOnClickListener {
             startActivity(Intent(this, AboutActivity::class.java))
         }
-        Analytics.get(this)?.capture("podcatcher_app_open")
+        Analytics.get(this).capture("podcatcher_app_open")
         conv = ConvPanel(this, findViewById(R.id.convHost))
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -80,7 +80,7 @@ class MainActivity : Activity() {
                 try {
                     val feed = Discovery.fetchFeed(url, 1)
                     val added = Store.addPodcast(this, Podcast(url, feed.title, feed.author, feed.artwork))
-                    if (added) Analytics.get(this)?.capture("podcatcher_podcast_added")
+                    if (added) Analytics.get(this).capture("podcatcher_podcast_added")
                     runOnUiThread {
                         if (added) {
                             input.setText("")
@@ -125,7 +125,7 @@ class MainActivity : Activity() {
                         .setItems(names) { _, which ->
                             val r = results[which]
                             val added = Store.addPodcast(this, Podcast(r.feedUrl, r.title, r.author, r.artwork))
-                    if (added) Analytics.get(this)?.capture("podcatcher_podcast_added")
+                    if (added) Analytics.get(this).capture("podcatcher_podcast_added")
                             say(if (added) "נוסף לספרייה: ${r.title}" else "הפודקאסט הזה כבר בספרייה.")
                             input.setText("")
                             render()

@@ -39,7 +39,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ConvSliceTest {
 
-    private val pkg = "com.baruchiro.podcatcher"
+    private val pkg = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext.packageName
     private val feedUrl = "https://conv-slice.example/feed"
     private lateinit var device: UiDevice
     private lateinit var appContext: Context

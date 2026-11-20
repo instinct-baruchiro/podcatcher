@@ -27,7 +27,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ScreenshotFlowTest {
 
-    private val pkg = "com.baruchiro.podcatcher"
+    private val pkg = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext.packageName
     private val feedUrl = "https://www.ranlevi.com/feed/mh_network_feed"
     private lateinit var device: UiDevice
     private lateinit var appContext: android.content.Context
@@ -128,7 +128,15 @@ class ScreenshotFlowTest {
         device.findObject(res("aboutOpen")).click()
         assertTrue("about screen did not open", device.wait(Until.hasObject(By.textContains("ברוך אודם")), 5_000))
         assertTrue("analytics switch missing", device.hasObject(res("analyticsSwitch")))
+        assertTrue("analytics must be off at first start", device.findObject(res("analyticsSwitch")).isChecked.not())
         shot("01b-about")
+        device.pressBack()
+        device.wait(Until.hasObject(res("intake")), 5_000)
+
+        // Conversation engine settings: the key is typed on the device, never bundled.
+        device.findObject(By.desc("הגדרות מנוע השיחה")).click()
+        assertTrue("settings dialog did not open", device.wait(Until.hasObject(By.clazz("android.widget.EditText").pkg(pkg)), 5_000))
+        shot("01c-conversation-settings")
         device.pressBack()
         device.wait(Until.hasObject(res("intake")), 5_000)
 
