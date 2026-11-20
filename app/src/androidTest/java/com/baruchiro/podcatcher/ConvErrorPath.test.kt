@@ -8,7 +8,6 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
-import com.baruchiro.podcatcher.conv.ConvActivity
 import com.baruchiro.podcatcher.conv.SecretStore
 import java.io.File
 import org.junit.Assert.assertNotNull
@@ -35,8 +34,10 @@ class ConvErrorPathTest {
         try {
             secrets.put("gemini_key", "dummy-ci-not-a-real-key")
             appContext.startActivity(
-                Intent(appContext, ConvActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                appContext.packageManager.getLaunchIntentForPackage(pkg)!!.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             )
+            device.wait(Until.hasObject(By.res("com.android.permissioncontroller:id/permission_allow_button")), 3_000)
+            device.findObject(By.res("com.android.permissioncontroller:id/permission_allow_button"))?.click()
             val input = device.wait(Until.findObject(By.res(pkg, "convInput")), 5_000)
             assertNotNull("chat input not found", input)
             input!!.text = "בדיקת חיבור"

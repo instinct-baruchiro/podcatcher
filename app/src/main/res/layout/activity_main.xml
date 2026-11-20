@@ -2,9 +2,15 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:layoutDirection="rtl"
-    android:padding="20dp"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
+
+    <LinearLayout
+        android:orientation="vertical"
+        android:padding="20dp"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
 
     <LinearLayout
         android:orientation="horizontal"
@@ -19,13 +25,6 @@
             android:layout_height="wrap_content"
             style="@style/PodTitle"
             android:text="הפודקאסטים שלי" />
-
-        <Button
-            android:id="@+id/convOpen"
-            style="@style/PodButton.Tonal"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="שיחה" />
     </LinearLayout>
 
     <LinearLayout
@@ -48,12 +47,14 @@
             android:imeOptions="actionDone"
             android:inputType="textUri" />
 
-        <Button
+        <ImageButton
             android:id="@+id/go"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            style="@style/PodIcon.Primary"
+            android:layout_width="52dp"
+            android:layout_height="52dp"
             android:layout_marginStart="10dp"
-            android:text="חיפוש / הוספה" />
+            android:src="@drawable/ic_search"
+            android:contentDescription="חיפוש או הוספה" />
     </LinearLayout>
 
     <TextView
@@ -73,4 +74,10 @@
         android:dividerHeight="12dp"
         android:listSelector="@android:color/transparent"
         android:clipToPadding="false" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/convHost"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
 </LinearLayout>
