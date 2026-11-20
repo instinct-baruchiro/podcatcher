@@ -76,6 +76,8 @@ class RealGeminiRobolectricTest {
         Store.setDefaultPolicy(c, Policy())
         val backend = GeminiBackend(apiKey = key, model = "gemini-3.1-flash-lite")
         val lib = AndroidLibrary(c)
+        val otherUrl = "https://other.example/feed"
+        Store.addPodcast(c, Podcast(otherUrl, "פודקאסט אחר", "", "", Policy()))
         val history = mutableListOf<ConvMessage>()
         val evidence = StringBuilder()
         var last = ""
@@ -86,10 +88,22 @@ class RealGeminiRobolectricTest {
             history.add(ConvMessage(false, last))
             evidence.append("USER: $user\nMODEL_RAW: $raw\nCONFIRMATION: $last\n")
         }
-        val stored = Store.podcasts(c).firstOrNull()
+        val stored = Store.podcasts(c).firstOrNull { it.feedUrl != otherUrl }
+        // Second turn: change only the podcast just added.
+        val second = "תוריד אוטומטית רק את הפודקאסט הזה"
+        history.add(ConvMessage(true, second))
+        val raw2 = backend.reply(history, Tools.SPEC)
+        val conf2 = Tools.execute(JSONObject(raw2), lib)
+        evidence.append("USER: $second\nMODEL_RAW: $raw2\nCONFIRMATION: $conf2\n")
+        val after = Store.podcasts(c)
+        val newOne = after.first { it.feedUrl == stored!!.feedUrl }.policy
+        val other = after.first { it.feedUrl == otherUrl }.policy
+        evidence.append("AFTER: new auto=${newOne.autoDownload} other auto=${other.autoDownload} default auto=${Store.defaultPolicy(c).autoDownload}\n")
+        val onlyNewChanged = newOne.autoDownload && !other.autoDownload && !Store.defaultPolicy(c).autoDownload
         evidence.append("STORED: " + (stored?.let { "keep=${it.policy.keep} auto=${it.policy.autoDownload} prio=${it.policy.priority}" } ?: "none") + "\n")
         java.io.File("build/real-gemini-subscribe-evidence.txt").writeText(evidence.toString(), Charsets.UTF_8)
         assertTrue("no subscription was stored", stored != null)
+        assertTrue("only the new podcast should change: $conf2", onlyNewChanged)
         assertTrue("confirmation must state the keep rule, got: $last", last.contains("שמירת ${stored!!.policy.keep} פרקים"))
         assertTrue("confirmation must state the download rule, got: $last",
             last.contains(if (stored.policy.autoDownload) "הורדה אוטומטית" else "ללא הורדה אוטומטית"))

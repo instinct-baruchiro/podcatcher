@@ -109,18 +109,25 @@ object Tools {
         if (!feedUrl.startsWith("http")) return "כדי להירשם אני צריכה קישור פיד מלא."
         return try {
             val title = lib.subscribeByUrl(feedUrl)
-            val rules = lib.get(feedUrl)?.let {
-                policyLine(PolicyPatch(it.autoDownload, it.keep, it.speed, it.skipIntroSec, it.priority, it.oldestFirst))
-            }
+            val pod = lib.get(feedUrl)
             // Read back from the store, never from the model's words: the listener sees the rules actually in force.
-            "נרשמת ל'$title'." + (rules?.let { "\nהכללים שהוחלו על הפודקאסט הזה (ברירות המחדל שלך): $it.\nאפשר לשנות לפודקאסט הזה בלבד, למשל: \"ישנים קודם\" להתחיל מהפרק הראשון, \"תוריד אוטומטית\" או \"שמור 10 פרקים\"." } ?: "")
+            "נרשמת ל'$title'." + (pod?.let {
+                "\nהכללים שהוחלו (ברירות המחדל שלך): ${essentialRules(it.autoDownload, it.keep, it.oldestFirst)}." +
+                    "\nפרטים נוספים: ${detailRules(it.speed, it.skipIntroSec, it.priority)}." +
+                    "\nאפשר לשנות לפודקאסט הזה בלבד, למשל: \"ישנים קודם בתור\" (מתוך 15 הפרקים האחרונים שלא נשמעו, לא מהפרק הראשון של הפודקאסט), \"תוריד אוטומטית\" או \"שמור 10 פרקים\"."
+            } ?: "")
         } catch (e: Exception) {
             "ההרשמה נכשלה: לא הצלחתי לקרוא את הפיד."
         }
     }
 
-    fun describeRules(autoDownload: Boolean, keep: Int, speed: Double, skipIntroSec: Int, priority: Int, oldestFirst: Boolean) =
-        policyLine(PolicyPatch(autoDownload, keep, speed, skipIntroSec, priority, oldestFirst))
+    /** The rules that matter on subscribe: download, retention, queue order. */
+    fun essentialRules(autoDownload: Boolean, keep: Int, oldestFirst: Boolean) =
+        policyLine(PolicyPatch(autoDownload, keep, null, null, null, oldestFirst))
+
+    /** Secondary rules, shown in smaller print on the confirmation. */
+    fun detailRules(speed: Double, skipIntroSec: Int, priority: Int) =
+        policyLine(PolicyPatch(null, null, speed, skipIntroSec, priority, null))
 
     private fun policyLine(p: PolicyPatch): String {
         val parts = mutableListOf<String>()

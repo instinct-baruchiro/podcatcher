@@ -39,7 +39,7 @@ class OnboardingFlowTest {
         // The first bubble (default rules) sits above in the drawer: scroll up to it.
         device.findObject(By.scrollable(true))?.scroll(androidx.test.uiautomator.Direction.UP, 1.0f)
         shot(device, ctx, "onb-1b-defaults")
-        assertNotNull("default rules not shown", device.wait(Until.findObject(By.textContains("ברירות המחדל האלה")), 5_000))
+        assertNotNull("default rules not shown", device.wait(Until.findObject(By.textContains("ברירת מחדל לפודקאסט חדש")), 5_000))
         device.findObject(By.scrollable(true))?.scroll(androidx.test.uiautomator.Direction.DOWN, 1.0f)
         // Nothing is chosen for the listener: the default rules are unchanged, and nothing is recorded before Done.
         assertEquals(com.baruchiro.podcatcher.data.Policy(), Store.defaultPolicy(ctx))

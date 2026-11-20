@@ -166,9 +166,8 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
         if (!due) return false
         onboardingShownThisProcess = true
         val d = Store.defaultPolicy(activity)
-        bubble("היי. כל פודקאסט חדש מתחיל עם ברירות המחדל האלה: " +
-            Tools.describeRules(d.autoDownload, d.keep, d.speed, d.skipIntroSec, d.priority, d.oldestFirst) +
-            ". בכל הרשמה אציג לך את מה שהוחל, ואפשר לשנות לפודקאסט אחד בלבד, למשל להתחיל בפודקאסט ותיק מהפרק הראשון (\"ישנים קודם\") ולעקוב אחרי החדשים בפודקאסט שוטף. מנויים שכבר יש לך לא משתנים.", false)
+        bubble("ברירת מחדל לפודקאסט חדש: " + Tools.essentialRules(d.autoDownload, d.keep, d.oldestFirst) +
+            ". בכל הרשמה אראה מה הוחל, ואפשר לשנות לפודקאסט אחד בלבד. מנויים קיימים לא משתנים.", false)
         askStats()
         post { setExpanded(true) }
         return true
