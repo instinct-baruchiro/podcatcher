@@ -124,6 +124,14 @@ class ScreenshotFlowTest {
         device.wait(Until.hasObject(res("intake")), 10_000)
         shot("01-library-empty")
 
+        // REL-1: the header info icon opens the About screen with the creator credit.
+        device.findObject(res("aboutOpen")).click()
+        assertTrue("about screen did not open", device.wait(Until.hasObject(By.textContains("ברוך אודם")), 5_000))
+        assertTrue("analytics switch missing", device.hasObject(res("analyticsSwitch")))
+        shot("01b-about")
+        device.pressBack()
+        device.wait(Until.hasObject(res("intake")), 5_000)
+
         // Subscribe by pasting the feed link.
         device.findObject(res("intake")).text = feedUrl
         device.findObject(res("go")).click()

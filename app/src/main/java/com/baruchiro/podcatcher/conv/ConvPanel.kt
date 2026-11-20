@@ -1,5 +1,7 @@
 package com.baruchiro.podcatcher.conv
 
+import com.baruchiro.podcatcher.telemetry.ConversationLog
+
 import android.app.Activity
 import android.app.AlertDialog
 import android.graphics.Typeface
@@ -40,6 +42,27 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
     private val scope = CoroutineScope(Dispatchers.Main)
     private val prefs = activity.getSharedPreferences("conv_config", Activity.MODE_PRIVATE)
     private val secrets = SecretStore(activity)
+    private val convLog = ConversationLog(
+        activity.getSharedPreferences("telemetry", Activity.MODE_PRIVATE),
+        channel = if (activity.applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0) "test" else "prod"
+    )
+    private val appVersion = activity.packageManager.getPackageInfo(activity.packageName, 0).versionName ?: "?"
+
+    private fun store(role: String, text: String) {
+        if (convLog.consent != ConversationLog.Consent.GRANTED) return
+        Thread { convLog.record(role, text, appVersion) }.start()
+    }
+
+    /** REL-1: nothing is stored before the listener has seen this and agreed. */
+    private fun showNotice(then: () -> Unit) {
+        android.app.AlertDialog.Builder(activity)
+            .setTitle("שמירת שיחות")
+            .setMessage("השיחות עם האפליקציה נשמרות לצורך בקרה ושיפור השירות, ואפשר למחוק אותן באודות. בלי הסכמה, השיחה ממשיכה לעבוד והשיחות לא נשמרות.")
+            .setPositiveButton("מסכים") { _, _ -> convLog.consent = ConversationLog.Consent.GRANTED; then() }
+            .setNegativeButton("לא מסכים") { _, _ -> convLog.consent = ConversationLog.Consent.DECLINED; then() }
+            .setCancelable(false)
+            .show()
+    }
 
     private val host: ViewGroup = hostView
     private val sheet: LinearLayout
@@ -228,10 +251,12 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
     private fun onSend() {
         val text = input.text.toString().trim()
         if (text.isEmpty()) return
+        if (convLog.needsNotice()) { showNotice { onSend() }; return }
         input.text.clear()
         setExpanded(true)
         history.add(ConvMessage(true, text))
         bubble(text, true)
+        store("user", text)
         scope.launch {
             val raw = withContext(Dispatchers.IO) { backend.reply(history, Tools.SPEC) }
             val json = runCatching { JSONObject(raw) }.getOrElse {
@@ -241,6 +266,7 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
             if (confirmation.isNotBlank()) {
                 history.add(ConvMessage(false, confirmation))
                 bubble(confirmation, false)
+                store("app", confirmation)
             }
         }
     }

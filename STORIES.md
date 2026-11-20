@@ -244,14 +244,20 @@ Acceptance:
 
 ## REL-1 — Release gates: usage analytics and stored conversations
 
-<!-- @unimplemented -->
+Owner voice, 2026-11-20 09:36 and 10:21: conditions for publishing the app, and
+a credit (About) screen showing he built it.
 
-Owner voice, 2026-11-20 09:36: two conditions for publishing the app. Neither
-is built; no real user data is collected until both are settled.
+Status: built and tested on the client side. Anonymous usage events go to the
+owner's PostHog project (events only, no person profiles, user switch in
+About, off under test runs). The About screen credits Baruch Odem. The
+conversation notice, consent and delete client exist but store nothing: no
+server is deployed, so the app contacts none. Deploying a storage relay, its
+account and any key placement are not approved. No real conversation data is
+collected.
 
-1. Usage analytics, possibly with the same PostHog setup he already uses
-   (Kotlin/Android is supported by the PostHog SDK). Current plan, usage and
-   cost of reusing it are unverified.
+1. Usage analytics with the PostHog setup he already uses. The app posts events
+   itself to the public ingest endpoint with the same public project token his
+   sites ship, rather than the Android SDK. Plan and cost of reuse unverified.
 2. Every conversation is stored for oversight and service improvement, in a
    database that allows investigation. The user sees a clear notice before
    anything is saved.
