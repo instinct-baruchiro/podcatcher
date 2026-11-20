@@ -218,7 +218,7 @@ and deterministic; the listener can ask to change them or reorder, but the app
 never changes them by itself. Exceptions to the rules may come later.
 
 Recorded open choices (unresolved, not settled here):
-- Episode order inside one podcast (newest first or oldest first; newest first is a provisional placeholder, per-podcast setting).
+- Episode order inside one podcast: the owner said (2026-11-20 09:22 voice) it depends on each podcast, no global choice, and asked to leave it for now. It stays a per-podcast setting; newest first is only a placeholder default.
 - Whether skipping an episode should count as played (currently it does not).
 - His Spotify mechanism comments are his hypothesis, not verified fact.
 
