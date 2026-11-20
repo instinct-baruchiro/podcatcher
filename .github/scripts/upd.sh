@@ -23,6 +23,7 @@ prefs() { for f in podcatcher telemetry conv_config; do echo "== $f"; adb shell 
 vers() { adb shell dumpsys package $PKG | grep -E "versionCode|versionName|lastUpdateTime|firstInstallTime" | head -5; }
 adb uninstall $PKG >/dev/null 2>&1
 adb install $O/old.apk > $O/01-install-old.txt 2>&1; vers > $O/01-vers-old.txt
+adb shell pm grant $PKG android.permission.POST_NOTIFICATIONS >> $O/01-install-old.txt 2>&1
 adb shell am start -n $PKG/com.baruchiro.podcatcher.ui.MainActivity >/dev/null 2>&1 || adb shell monkey -p $PKG 1 >/dev/null 2>&1
 sleep 6; shot a1-old-launch
 say "keep 3 episodes for every podcast"; sleep 25; shot a2-old-reply
