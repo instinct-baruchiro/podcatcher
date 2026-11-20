@@ -8,7 +8,7 @@ Package: com.baruchiro.podcatcher.next. It is a separate app from the earlier v0
 - Private key: held in the assistant vault item "Podcatcher app signing key" (hex of the 32-byte EC private scalar,
   one line). It must never be committed, posted or put in CI.
 - Rebuild a PKCS12 for a build: turn the hex into a SEC1 key
-  (30 25 02 01 01 04 20 <32 bytes> a0 0a 06 08 2a 86 48 ce 3d 03 01 07), then
+  (30 31 02 01 01 04 20 <32 bytes> a0 0a 06 08 2a 86 48 ce 3d 03 01 07), then
   openssl pkcs12 -export -inkey key.pem -in docs/podcatcher-signing-cert.pem -name podcatcher -out id.p12
   and build with PODCATCHER_KEYSTORE=/path/id.p12 PODCATCHER_KEYSTORE_PASS=... ./gradlew assembleDebug.
 - Check: apksigner verify --print-certs app-debug.apk must show the SHA-256 above.
