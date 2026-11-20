@@ -1,4 +1,4 @@
-// @story: CONV-1
+// @story: CONV-1, QUEUE-1
 package com.baruchiro.podcatcher.conv
 
 import org.json.JSONObject
@@ -41,7 +41,9 @@ class ToolsTest {
                 patch.autoDownload ?: p.autoDownload,
                 patch.keep ?: p.keep,
                 patch.speed ?: p.speed,
-                patch.skipIntroSec ?: p.skipIntroSec)
+                patch.skipIntroSec ?: p.skipIntroSec,
+                patch.priority ?: p.priority,
+                patch.oldestFirst ?: p.oldestFirst)
             return pods[i]
         }
         override fun defaultPolicy() = defaults
@@ -62,6 +64,8 @@ class ToolsTest {
             """{"say":"","tool":"set_policy","args":{"feedUrl":"https://a.example/feed","keep":5}}"""
         userText.contains("ברירת מחדל") ->
             """{"say":"","tool":"set_policy","args":{"keep":10}}"""
+        userText.contains("עדיפות") ->
+            """{"say":"","tool":"set_queue_rules","args":{"feedUrl":"https://a.example/feed","priority":1,"oldestFirst":true}}"""
         userText.contains("מה יש לי") ->
             """{"say":"","tool":"list_podcasts","args":{}}"""
         userText.contains("חפשי") ->
@@ -81,6 +85,21 @@ class ToolsTest {
         assertEquals(1.5, lib.get("https://a.example/feed")!!.speed, 0.001)
         assertTrue(reply.contains("מהירות 1.5x"))
         assertTrue(reply.contains("עושים היסטוריה"))
+    }
+
+    @Test
+    fun queueRulesChangeOnlyOnRequestAndStayInRange() {
+        val lib = FakeLibrary()
+        assertEquals(3, lib.get("https://a.example/feed")!!.priority)
+
+        val reply = turn(lib, "תני עדיפות ראשונה לעושים היסטוריה")
+        assertEquals(1, lib.get("https://a.example/feed")!!.priority)
+        assertTrue(lib.get("https://a.example/feed")!!.oldestFirst)
+        assertTrue(reply.contains("עדיפות 1"))
+
+        val tooHigh = Tools.execute(JSONObject("""{"tool":"set_queue_rules","args":{"feedUrl":"https://a.example/feed","priority":9}}"""), lib)
+        assertEquals(1, lib.get("https://a.example/feed")!!.priority)
+        assertTrue(tooHigh.contains("בין 1 ל-5"))
     }
 
     @Test

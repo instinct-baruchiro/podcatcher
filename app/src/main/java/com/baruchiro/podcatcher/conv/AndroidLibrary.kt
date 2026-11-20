@@ -10,7 +10,7 @@ import com.baruchiro.podcatcher.net.Discovery
 class AndroidLibrary(private val ctx: Context) : Library {
 
     private fun Pod.toData() = Podcast(feedUrl, title, "", "", Policy(autoDownload, keep, speed, skipIntroSec))
-    private fun Podcast.toConv() = Pod(feedUrl, title, policy.autoDownload, policy.keep, policy.speed, policy.skipIntroSec)
+    private fun Podcast.toConv() = Pod(feedUrl, title, policy.autoDownload, policy.keep, policy.speed, policy.skipIntroSec, policy.priority, policy.oldestFirst)
 
     override fun list(): List<Pod> = Store.podcasts(ctx).map { it.toConv() }
 
@@ -37,7 +37,9 @@ class AndroidLibrary(private val ctx: Context) : Library {
             autoDownload = patch.autoDownload ?: p.autoDownload,
             keep = patch.keep ?: p.keep,
             speed = patch.speed ?: p.speed,
-            skipIntroSec = patch.skipIntroSec ?: p.skipIntroSec
+            skipIntroSec = patch.skipIntroSec ?: p.skipIntroSec,
+            priority = patch.priority ?: p.priority,
+            oldestFirst = patch.oldestFirst ?: p.oldestFirst
         ))
         return pod.toConv()
     }

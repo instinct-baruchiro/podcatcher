@@ -208,7 +208,9 @@ automatic next are built. The queue shows up to 15 unplayed episodes per
 podcast taken from the first 50 items of its feed, not the whole archive. An
 episode counts as played only when it finishes; skipping past it leaves it
 unplayed (a provisional choice, no owner statement yet). No removal or manual
-reordering of single episodes.
+reordering of single episodes. The listener can ask the conversation to change
+a podcast's priority or episode order (`set_queue_rules`, verified with a fake
+backend only, not a real model).
 
 Decided by the owner (2026-11-20 voice): strict order between priorities, a
 lower priority plays only after higher ones are exhausted. The rules are fixed
