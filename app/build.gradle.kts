@@ -8,7 +8,7 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.baruchiro.podcatcher"
+        applicationId = "com.baruchiro.podcatcher.next"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
