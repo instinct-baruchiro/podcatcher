@@ -252,8 +252,10 @@ owner's PostHog project (events only, no person profiles, user switch in
 About, off under test runs). On by default since the owner's 2026-11-20 14:18
 instruction, but only after a first-run chat has shown the notice and recorded
 the choice (preselected, can be unchecked there); an earlier opt-out is kept.
-The same first-run chat asks the download and retention defaults and summarises
-what it stored; subscribing also reads back the rules actually stored. The About screen credits Baruch Odem. The
+The same first-run chat states the default rules in force (no download or
+retention questions; the owner accepts product-chosen defaults at 14:26) and
+subscribing reads back the rules actually stored plus how to change them for
+one podcast. The About screen credits Baruch Odem. The
 conversation notice, consent and delete client exist but store nothing: no
 server is deployed, so the app contacts none. Deploying a storage relay, its
 account and any key placement are not approved. No real conversation data is

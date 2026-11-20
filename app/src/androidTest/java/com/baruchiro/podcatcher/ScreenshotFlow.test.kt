@@ -128,7 +128,9 @@ class ScreenshotFlowTest {
         device.findObject(res("aboutOpen")).click()
         assertTrue("about screen did not open", device.wait(Until.hasObject(By.textContains("ברוך אודם")), 5_000))
         assertTrue("analytics switch missing", device.hasObject(res("analyticsSwitch")))
-        assertTrue("analytics must be off at first start", device.findObject(res("analyticsSwitch")).isChecked.not())
+        assertTrue("analytics is on by default (owner decision 2026-11-20)", device.findObject(res("analyticsSwitch")).isChecked)
+        assertTrue("but nothing is recorded as chosen before the first-run chat",
+            !appContext.getSharedPreferences("telemetry", Context.MODE_PRIVATE).contains("analytics_enabled"))
         shot("01b-about")
         device.pressBack()
         device.wait(Until.hasObject(res("intake")), 5_000)

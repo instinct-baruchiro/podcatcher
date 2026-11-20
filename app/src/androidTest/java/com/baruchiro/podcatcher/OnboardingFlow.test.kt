@@ -16,12 +16,12 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** First-run chat on a device: asks the defaults, stores exactly what was chosen, and says so. */
+/** First-run chat on a device: states the default rules in force, records only the usage-stats choice. */
 @RunWith(AndroidJUnit4::class)
 class OnboardingFlowTest {
 
     @Test
-    fun firstRunChatStoresTheChosenDefaultsAndSummarisesThem() {
+    fun firstRunChatShowsDefaultsAndRecordsOnlyTheStatsChoice() {
         val inst = InstrumentationRegistry.getInstrumentation()
         val ctx = inst.targetContext
         val pkg = ctx.packageName
@@ -32,23 +32,20 @@ class OnboardingFlowTest {
         Store.setDefaultPolicy(ctx, com.baruchiro.podcatcher.data.Policy())
 
         ctx.startActivity(ctx.packageManager.getLaunchIntentForPackage(pkg)!!.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK))
-        assertNotNull("question 1 missing", device.wait(Until.findObject(By.text("כן, אוטומטית")), 15_000))
-        shot(device, ctx, "onb-1-question")
-        device.findObject(By.text("כן, אוטומטית")).click()
-        assertNotNull("question 2 missing", device.wait(Until.findObject(By.text("5")), 5_000))
-        device.findObject(By.text("5")).click()
-        val done = device.wait(Until.findObject(By.res(pkg, "onboardDone")), 5_000)
-        assertNotNull("stats question missing", done)
+        val done = device.wait(Until.findObject(By.res(pkg, "onboardDone")), 15_000)
+        assertNotNull("first-run chat missing", done)
+        assertNotNull("default rules not shown", device.findObject(By.textContains("ברירות המחדל האלה")))
         assertTrue("stats choice must be preselected", device.findObject(By.res(pkg, "onboardStats")).isChecked)
-        shot(device, ctx, "onb-2-stats")
+        shot(device, ctx, "onb-1-defaults-and-stats")
+        // Nothing is chosen for the listener: the default rules are unchanged, and nothing is recorded before Done.
+        assertEquals(com.baruchiro.podcatcher.data.Policy(), Store.defaultPolicy(ctx))
+        assertTrue(!ctx.getSharedPreferences("telemetry", Context.MODE_PRIVATE).contains("analytics_enabled"))
+        device.findObject(By.res(pkg, "onboardStats")).click() // opt out before continuing
         done.click()
-        assertNotNull("summary missing", device.wait(Until.findObject(By.textContains("הגדרתי:")), 5_000))
-        shot(device, ctx, "onb-3-summary")
-
-        val p = Store.defaultPolicy(ctx)
-        assertEquals(true, p.autoDownload)
-        assertEquals(5, p.keep)
-        assertTrue(ctx.getSharedPreferences("telemetry", Context.MODE_PRIVATE).getBoolean("analytics_enabled", false))
+        assertNotNull("summary missing", device.wait(Until.findObject(By.textContains("כבויות")), 5_000))
+        shot(device, ctx, "onb-2-opted-out")
+        assertEquals(false, ctx.getSharedPreferences("telemetry", Context.MODE_PRIVATE).getBoolean("analytics_enabled", true))
+        assertEquals(com.baruchiro.podcatcher.data.Policy(), Store.defaultPolicy(ctx))
         ctx.getSharedPreferences("conv_config", Context.MODE_PRIVATE).edit().remove("onboarding_force").commit()
         Store.setDefaultPolicy(ctx, com.baruchiro.podcatcher.data.Policy())
     }

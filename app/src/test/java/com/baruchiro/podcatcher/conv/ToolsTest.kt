@@ -143,6 +143,10 @@ class ToolsTest {
         assertTrue(reply.contains("נרשמת"))
         // The confirmation states the rules actually stored for the new podcast, not only that it subscribed.
         assertTrue(reply, reply.contains("שמירת 3 פרקים") && reply.contains("ללא הורדה אוטומטית"))
+        assertTrue("per-podcast change hint missing: $reply", reply.contains("לפודקאסט הזה בלבד"))
+        // A follow-up question the model asked next to the action is not dropped; its confirmation claim is not echoed.
+        val asked = Tools.execute(JSONObject("""{"say":"נרשמתי בהצלחה. האם תרצה שאוריד פרקים?","tool":"subscribe","args":{"feedUrl":"https://d.example/feed"}}"""), lib)
+        assertTrue(asked, asked.trimEnd().endsWith("האם תרצה שאוריד פרקים?") && !asked.contains("נרשמתי בהצלחה"))
     }
 
     @Test
