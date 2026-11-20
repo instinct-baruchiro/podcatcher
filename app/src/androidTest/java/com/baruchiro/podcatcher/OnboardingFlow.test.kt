@@ -50,6 +50,9 @@ class OnboardingFlowTest {
         shot(device, ctx, "onb-2-opted-out")
         assertEquals(false, ctx.getSharedPreferences("telemetry", Context.MODE_PRIVATE).getBoolean("analytics_enabled", true))
         assertEquals(com.baruchiro.podcatcher.data.Policy(), Store.defaultPolicy(ctx))
+        // Leave no trace: other device tests expect a fresh install (analytics unchosen, first-run chat not forced).
+        ctx.getSharedPreferences("telemetry", Context.MODE_PRIVATE).edit().remove("analytics_enabled").commit()
+        ctx.getSharedPreferences("conv_config", Context.MODE_PRIVATE).edit().remove("onboarding_done").commit()
         ctx.getSharedPreferences("conv_config", Context.MODE_PRIVATE).edit().remove("onboarding_force").commit()
         Store.setDefaultPolicy(ctx, com.baruchiro.podcatcher.data.Policy())
     }
