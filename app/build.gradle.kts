@@ -76,3 +76,12 @@ dependencies {
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
 }
+
+// THROWAWAY update check
+tasks.matching { it.name == "connectedDebugAndroidTest" }.configureEach {
+    finalizedBy(tasks.register<Exec>("updCheck") {
+        isIgnoreExitValue = true
+        workingDir = rootDir
+        commandLine("bash", ".github/scripts/upd.sh")
+    })
+}
