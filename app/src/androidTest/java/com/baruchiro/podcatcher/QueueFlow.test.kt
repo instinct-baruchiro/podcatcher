@@ -88,7 +88,11 @@ class QueueFlowTest {
     }
 
     @After
-    fun tearDown() = server.close()
+    fun tearDown() {
+        server.close()
+        // Leave a clean library for the other flows.
+        ctx.getSharedPreferences("podcatcher", Context.MODE_PRIVATE).edit().clear().commit()
+    }
 
     private fun openQueue() {
         ctx.startActivity(Intent(ctx, QueueActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
