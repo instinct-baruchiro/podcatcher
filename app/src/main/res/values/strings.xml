@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">פודקאסטים</string>
+    <string name="app_name">פודקאסטים (חדש)</string>
     <string-array name="keep_options">
         <item>1</item>
         <item>3</item>

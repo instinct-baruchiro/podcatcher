@@ -8,13 +8,27 @@ android {
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.baruchiro.podcatcher"
+        applicationId = "com.baruchiro.podcatcher.next"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "0.1-trial"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    // App identity key. The private key is never in the repo. A build that has
+    // PODCATCHER_KEYSTORE (path to a PKCS12 file) and PODCATCHER_KEYSTORE_PASS signs with it, so
+    // updates keep installing over each other. Without them (CI) the build uses the debug key.
+    val identityKeystore = System.getenv("PODCATCHER_KEYSTORE")
+    if (identityKeystore != null) {
+        signingConfigs.create("identity") {
+            storeFile = file(identityKeystore)
+            storePassword = System.getenv("PODCATCHER_KEYSTORE_PASS")
+            keyAlias = "podcatcher"
+            keyPassword = System.getenv("PODCATCHER_KEYSTORE_PASS")
+        }
+        buildTypes.getByName("debug").signingConfig = signingConfigs.getByName("identity")
     }
 
     compileOptions {
