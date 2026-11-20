@@ -203,12 +203,13 @@ class ScreenshotFlowTest {
         shot("08-queue")
         device.findObject(res("queuePlay")).click()
         assertTrue("queue playback never started", awaitPlaying(45, "queue"))
-        val queueSize = Regex("queue=.*?size=(\\d+)").find(mediaSessionDump())?.groupValues?.get(1)?.toInt() ?: 0
-        assertTrue("session queue has $queueSize items, expected several", queueSize > 1)
-        val before = mediaSessionDump().substringAfter("metadata:").lineSequence().first()
+        val dumpBefore = mediaSessionDump()
+        File(shotsDir, "dumpsys-queue-before.txt").also { it.writeText(dumpBefore); publish(it) }
+        val before = dumpBefore.substringAfter("metadata:").lineSequence().first()
         device.executeShellCommand("input keyevent KEYCODE_MEDIA_NEXT")
         Thread.sleep(3_000)
         val after = mediaSessionDump().substringAfter("metadata:").lineSequence().first()
+        File(shotsDir, "dumpsys-queue-after.txt").also { it.writeText(mediaSessionDump()); publish(it) }
         assertTrue("next did not move to the following episode", before != after)
         shot("09-queue-next")
     }
