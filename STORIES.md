@@ -200,13 +200,19 @@ priority (the Podcast Addict model: "יש סדר עדיפויות... כל פעם
 מפודקאסט אחר במידה והם באותה עדיפות") — so that no podcast silently
 disappears from my listening the way it can in an opaque AI-chosen feed.
 
-Status: documented (owner direction, 2026-11-19). FUTURE experience, not
-current scope. There is no playback queue in the app today: playback is
-single-episode; the only rotation is the per-podcast keep-N download window.
+Status: in progress, current scope since the owner's 2026-11-20 order of work
+(add podcast, then playlist management, then conversational settings). The
+ordering rule is built and tested (`buildQueue`). Not built yet: the stored
+per-podcast priority, the queue screen with reordering, and sequential
+playback. Playback is single-episode today.
+
+Decided by the owner (2026-11-20 voice): strict order between priorities, a
+lower priority plays only after higher ones are exhausted. The rules are fixed
+and deterministic; the listener can ask to change them or reorder, but the app
+never changes them by itself. Exceptions to the rules may come later.
 
 Recorded open choices (unresolved, not settled here):
-- Strict high-priority exhaustion vs. occasionally giving low-priority
-  podcasts a turn — owner has not decided.
+- Episode order inside one podcast (newest first or oldest first).
 - His Spotify mechanism comments are his hypothesis, not verified fact.
 
 Future feature candidate (explicitly future, owner's words): a monthly
@@ -224,9 +230,7 @@ automatic to manual download ("אולי להפוך מהורדה אוטומטית
 or interleave ratios ("אולי אתה רוצה כל שלושה פרקים כאלו לשים פרק אחד כזה").
 Owner: "לא הייתי נכנס לזה מיד" — recorded as a case, not to be built now.
 
-Acceptance (when scheduled):
+Acceptance:
 - Queue order follows explicit priority + round-robin rules the user can see.
 - Hints may only prompt a question to the user; rule changes require his
-  confirmation.
-
-<!-- @unimplemented -->
+  confirmation (future).
