@@ -169,7 +169,8 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
         bubble("ברירת מחדל לפודקאסט חדש: " + Tools.essentialRules(d.autoDownload, d.keep, d.oldestFirst) +
             ". בכל הרשמה אראה מה הוחל, ואפשר לשנות לפודקאסט אחד בלבד. מנויים קיימים לא משתנים.", false)
         askStats()
-        post { setExpanded(true) }
+        // Open on the lead (the default rules), not on the checkbox at the bottom.
+        post { setExpanded(true); scroll.post { scroll.scrollTo(0, 0) } }
         return true
     }
 
