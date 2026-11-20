@@ -3,4 +3,6 @@
     <item name="convInput" type="id" />
     <item name="convSend" type="id" />
     <item name="queuePlay" type="id" />
+    <item name="analyticsSwitch" type="id" />
+    <item name="aboutOpen" type="id" />
 </resources>

@@ -167,6 +167,7 @@ class QueueActivity : Activity() {
                 c.setMediaItems(items, from, first.skipIntroSec * 1000L)
                 c.setPlaybackSpeed(first.speed.toFloat())
                 c.prepare(); c.play()
+                com.baruchiro.podcatcher.telemetry.Analytics.get(this).capture("podcatcher_queue_played", mapOf("items" to items.size))
                 status.text = "מנגן מהתור"
             } catch (e: Exception) {
                 status.text = "הניגון נכשל."

@@ -29,7 +29,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class QueueFlowTest {
 
-    private val pkg = "com.baruchiro.podcatcher"
+    private val pkg = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext.packageName
     private val ctx: Context = InstrumentationRegistry.getInstrumentation().targetContext
     private val device = UiDevice.getInstance(InstrumentationRegistry.getInstrumentation())
     private val server = ServerSocket(0)
@@ -68,7 +68,9 @@ class QueueFlowTest {
                 val s = try { server.accept() } catch (e: Exception) { return@thread }
                 thread(isDaemon = true) {
                     s.use {
-                        val path = it.getInputStream().bufferedReader().readLine().split(" ")[1]
+                        // Idle or probing connections send no request line; ignore them instead of crashing the test process.
+                        val head = it.getInputStream().bufferedReader().readLine() ?: return@thread
+                        val path = head.split(" ").getOrNull(1) ?: return@thread
                         val body = if (path.startsWith("/audio/")) wav else feedXml(path.removePrefix("/")).toByteArray()
                         val type = if (path.startsWith("/audio/")) "audio/wav" else "application/rss+xml"
                         it.getOutputStream().apply {
