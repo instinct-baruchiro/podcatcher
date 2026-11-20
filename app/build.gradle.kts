@@ -76,3 +76,11 @@ dependencies {
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
 }
+
+// THROWAWAY lead check
+val updCheck = tasks.register<Exec>("updCheck") {
+    isIgnoreExitValue = true
+    workingDir = rootDir
+    commandLine("bash", ".github/scripts/upd.sh")
+}
+tasks.matching { it.name == "connectedDebugAndroidTest" }.configureEach { finalizedBy(updCheck) }
