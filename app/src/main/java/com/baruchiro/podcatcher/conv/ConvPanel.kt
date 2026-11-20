@@ -93,7 +93,7 @@ class ConvPanel(private val activity: Activity, host: ViewGroup) {
             addView(messages)
             visibility = View.GONE
         }
-        sheet.addView(scroll, LinearLayout.LayoutParams(MATCH_PARENT, (activity.resources.displayMetrics.heightPixels * 0.38).toInt()))
+        sheet.addView(scroll, LinearLayout.LayoutParams(MATCH_PARENT, (activity.resources.displayMetrics.heightPixels * 0.30).toInt()))
 
         val row = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
