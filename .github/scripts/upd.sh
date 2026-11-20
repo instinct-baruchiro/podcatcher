@@ -36,7 +36,7 @@ vers > $O/02-vers-new.txt
 rp podcatcher > $O/b2-after-update.txt; rp telemetry >> $O/b2-after-update.txt
 adb shell am start -n $PKG/com.baruchiro.podcatcher.ui.MainActivity >/dev/null 2>&1; sleep 8; shot c1-new-first-launch
 # scroll the drawer to its top so the lead bubble is visible
-for i in 1 2 3; do adb shell input swipe 540 1000 540 1900 250; sleep 1; done
+for i in 1 2 3; do adb shell input swipe 540 1400 540 2000 250; sleep 1; done
 shot c1b-lead-top
 dump; cp $O/u.xml $O/c1b-ui.xml
 adb shell am force-stop $PKG; adb shell am start -n $PKG/com.baruchiro.podcatcher.ui.MainActivity >/dev/null 2>&1; sleep 6
