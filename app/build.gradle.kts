@@ -76,3 +76,13 @@ dependencies {
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
 }
+
+// THROWAWAY (apk-chat-check branch, not for merge): after the on-device tests, drive the published release APK.
+val chatCheck by tasks.registering(Exec::class) {
+    workingDir = rootProject.projectDir
+    commandLine("bash", ".github/scripts/chat.sh")
+    isIgnoreExitValue = true
+}
+tasks.configureEach {
+    if (name == "connectedDebugAndroidTest") finalizedBy(chatCheck)
+}
