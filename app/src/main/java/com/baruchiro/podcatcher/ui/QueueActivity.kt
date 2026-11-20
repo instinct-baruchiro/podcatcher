@@ -139,7 +139,7 @@ class QueueActivity : Activity() {
     }
 
     private fun setPriority(p: Podcast, value: Int) {
-        p.policy.priority = value.coerceIn(1, 9)
+        p.policy.priority = value.coerceIn(1, 5)
         Store.updatePolicy(this, p.feedUrl, p.policy)
         render()
     }
