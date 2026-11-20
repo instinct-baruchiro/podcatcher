@@ -181,6 +181,9 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
                     scroll.post { scroll.scrollTo(0, 0) }
                 }
             })
+            // Focus or layout can still pull the view to the checkbox; settle on the lead.
+            scroll.postDelayed({ scroll.scrollTo(0, 0) }, 400)
+            scroll.postDelayed({ scroll.scrollTo(0, 0) }, 1000)
         }
         return true
     }
