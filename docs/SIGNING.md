@@ -12,3 +12,14 @@ Package: com.baruchiro.podcatcher.next. It is a separate app from the earlier v0
   openssl pkcs12 -export -inkey key.pem -in docs/podcatcher-signing-cert.pem -name podcatcher -out id.p12
   and build with PODCATCHER_KEYSTORE=/path/id.p12 PODCATCHER_KEYSTORE_PASS=... ./gradlew assembleDebug.
 - Check: apksigner verify --print-certs app-debug.apk must show the SHA-256 above.
+
+## Trial build that carries a Gemini key (local only, never committed)
+
+Used for the v0.3-next-trial release. The key lives only in the vault item "Gemini API key".
+1. Write the key to a git-ignored file: `app/src/main/java/com/baruchiro/podcatcher/conv/TrialKey.kt` containing
+   `object TrialKey { const val KEY = "<key>" }` (add the path to .git/info/exclude).
+2. Local, uncommitted one-line change in ConvPanel.configuredBackend:
+   `val key = secrets.get("gemini_key").orEmpty().ifBlank { TrialKey.KEY }`
+3. Build with the identity keystore as above (`assembleDebug`), check `apksigner verify --print-certs`.
+4. Revert step 2, delete TrialKey.kt, delete the keystore and temp key files. Never push that tree.
+The key is extractable from such an APK. Rotate or delete it in AI Studio when the trial ends.
