@@ -9,12 +9,13 @@ import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
 import android.widget.BaseAdapter
-import android.widget.Button
+import android.widget.ImageButton
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.ListView
 import android.widget.TextView
 import com.baruchiro.podcatcher.R
+import com.baruchiro.podcatcher.conv.ConvPanel
 import com.baruchiro.podcatcher.data.Podcast
 import com.baruchiro.podcatcher.data.Store
 import com.baruchiro.podcatcher.net.Discovery
@@ -27,6 +28,7 @@ class MainActivity : Activity() {
     private lateinit var input: EditText
     private lateinit var status: TextView
     private lateinit var listView: ListView
+    private lateinit var conv: ConvPanel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,16 +36,19 @@ class MainActivity : Activity() {
         input = findViewById(R.id.intake)
         status = findViewById(R.id.status)
         listView = findViewById(R.id.podcasts)
-        findViewById<Button>(R.id.go).setOnClickListener { intake() }
-        findViewById<Button>(R.id.convOpen).setOnClickListener {
-            startActivity(Intent(this, com.baruchiro.podcatcher.conv.ConvActivity::class.java))
-        }
+        findViewById<ImageButton>(R.id.go).setOnClickListener { intake() }
+        conv = ConvPanel(this, findViewById(R.id.convHost))
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
         }
         FeedRefreshWorker.schedule(this)
+    }
+
+    @Deprecated("Back closes the open conversation drawer first")
+    override fun onBackPressed() {
+        if (conv.expanded) conv.setExpanded(false) else super.onBackPressed()
     }
 
     override fun onResume() {

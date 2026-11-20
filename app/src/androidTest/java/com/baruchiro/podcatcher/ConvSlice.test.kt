@@ -11,7 +11,6 @@ import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
 import com.baruchiro.podcatcher.conv.AndroidLibrary
-import com.baruchiro.podcatcher.conv.ConvActivity
 import com.baruchiro.podcatcher.conv.Tools
 import com.baruchiro.podcatcher.data.Policy
 import com.baruchiro.podcatcher.data.Podcast
@@ -105,8 +104,10 @@ class ConvSliceTest {
     @Test
     fun chatUiAcceptsHebrewAndAnswersHonestlyWithoutEngine() {
         appContext.startActivity(
-            Intent(appContext, ConvActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            appContext.packageManager.getLaunchIntentForPackage(pkg)!!.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         )
+        device.wait(Until.hasObject(By.res("com.android.permissioncontroller:id/permission_allow_button")), 3_000)
+        device.findObject(By.res("com.android.permissioncontroller:id/permission_allow_button"))?.click()
         val input = device.wait(Until.findObject(By.res(pkg, "convInput")), 5_000)
         assertNotNull("chat input not found", input)
         input!!.text = "תשמור רק 3 פרקים אחרונים"

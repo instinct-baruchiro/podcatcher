@@ -16,7 +16,7 @@ import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.BaseAdapter
-import android.widget.Button
+import android.widget.ImageButton
 import android.widget.CheckBox
 import android.widget.ImageView
 import android.widget.ListView
@@ -26,6 +26,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.baruchiro.podcatcher.R
+import com.baruchiro.podcatcher.conv.ConvPanel
 import com.baruchiro.podcatcher.data.Podcast
 import com.baruchiro.podcatcher.data.Store
 import com.baruchiro.podcatcher.net.Discovery
@@ -48,6 +49,7 @@ class PodcastActivity : Activity() {
     private lateinit var listView: ListView
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var bindingPolicy = false
+    private lateinit var conv: ConvPanel
 
     // Refresh episode rows when a system download completes.
     private val dlReceiver = object : BroadcastReceiver() {
@@ -66,6 +68,7 @@ class PodcastActivity : Activity() {
 
         status = findViewById(R.id.status)
         listView = findViewById(R.id.episodes)
+        conv = ConvPanel(this, findViewById(R.id.convHost))
         findViewById<TextView>(R.id.ptitle).text = podcast.title
         artwork.into(findViewById(R.id.art), podcast.artwork)
 
@@ -108,6 +111,11 @@ class PodcastActivity : Activity() {
         // system server, so NOT_EXPORTED would silently never receive it (API 33+).
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(dlReceiver, filter, Context.RECEIVER_EXPORTED)
         else registerReceiver(dlReceiver, filter)
+    }
+
+    @Deprecated("Back closes the open conversation drawer first")
+    override fun onBackPressed() {
+        if (conv.expanded) conv.setExpanded(false) else super.onBackPressed()
     }
 
     override fun onDestroy() {
@@ -211,10 +219,11 @@ class PodcastActivity : Activity() {
             val ep = episodes[p]
             v.findViewById<TextView>(R.id.title).text = ep.title
             v.findViewById<TextView>(R.id.date).text = formatDate(ep.date)
-            v.findViewById<Button>(R.id.play).setOnClickListener { play(ep) }
-            val dl = v.findViewById<Button>(R.id.download)
+            v.findViewById<ImageButton>(R.id.play).setOnClickListener { play(ep) }
+            val dl = v.findViewById<ImageButton>(R.id.download)
             val saved = Store.downloadedPath(this@PodcastActivity, feedUrl, ep.guid) != null
-            dl.text = if (saved) "במכשיר" else "הורדה"
+            dl.setImageResource(if (saved) R.drawable.ic_check else R.drawable.ic_download)
+            dl.contentDescription = if (saved) "במכשיר" else "הורדה"
             dl.isEnabled = !saved
             dl.setOnClickListener { download(ep) }
             return v

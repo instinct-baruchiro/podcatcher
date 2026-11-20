@@ -137,6 +137,21 @@ class ScreenshotFlowTest {
         Thread.sleep(3_000)
         shot("02-library-subscribed")
 
+        // The conversation is a composer at the bottom of the library; focusing it
+        // opens the drawer above the keyboard without covering the composer, and
+        // Back (keyboard first, then drawer) returns to the collapsed bar.
+        device.findObject(res("convInput")).click()
+        assertTrue("drawer did not open above the keyboard", device.wait(Until.hasObject(By.desc("מגירת השיחה")), 3_000))
+        Thread.sleep(1_000)
+        shot("02b-conversation-keyboard")
+        val displayHeight = device.displayHeight
+        assertTrue("composer hidden by keyboard",
+            device.findObject(res("convSend")).visibleBounds.bottom < displayHeight)
+        device.pressBack()
+        device.pressBack()
+        assertTrue("library not back after closing drawer", device.wait(Until.hasObject(res("podcasts")), 3_000))
+        shot("02c-conversation-collapsed")
+
         // Open the podcast; episode rows carry a play button.
         device.findObjects(By.res(pkg, "title")).first().click()
         val hasPlay = device.wait(Until.hasObject(res("play")), 90_000)
@@ -147,6 +162,11 @@ class ScreenshotFlowTest {
         device.findObjects(res("play")).first().click()
         val playing = awaitPlaying(45, "stream")
         shot("04-playing")
+        device.findObject(res("convInput")).click()
+        Thread.sleep(1_000)
+        shot("04b-conversation-while-playing")
+        device.pressBack()
+        device.pressBack()
         assertTrue("player never reached STATE_PLAYING", playing)
 
         // The media notification should be present in the shade.
@@ -162,7 +182,7 @@ class ScreenshotFlowTest {
         for (i in 1..180) {
             Thread.sleep(1_000)
             val btn = device.findObjects(res("download")).firstOrNull()
-            if (btn != null && btn.text == "במכשיר") { onDevice = true; break }
+            if (btn != null && btn.contentDescription == "במכשיר") { onDevice = true; break }
         }
         if (!onDevice) dumpDownloadState()
         assertTrue("download never completed on device", onDevice)
