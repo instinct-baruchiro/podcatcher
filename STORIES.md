@@ -202,9 +202,13 @@ disappears from my listening the way it can in an opaque AI-chosen feed.
 
 Status: in progress, current scope since the owner's 2026-11-20 order of work
 (add podcast, then playlist management, then conversational settings). The
-ordering rule is built and tested (`buildQueue`). Not built yet: the stored
-per-podcast priority, the queue screen with reordering, and sequential
-playback. Playback is single-episode today.
+ordering rule, the stored per-podcast priority (1 to 5), the queue screen
+(priority up/down, next episodes, play) and sequential playback with
+automatic next are built. The queue shows up to 15 unplayed episodes per
+podcast taken from the first 50 items of its feed, not the whole archive. An
+episode counts as played only when it finishes; skipping past it leaves it
+unplayed (a provisional choice, no owner statement yet). No removal or manual
+reordering of single episodes.
 
 Decided by the owner (2026-11-20 voice): strict order between priorities, a
 lower priority plays only after higher ones are exhausted. The rules are fixed
@@ -212,7 +216,8 @@ and deterministic; the listener can ask to change them or reorder, but the app
 never changes them by itself. Exceptions to the rules may come later.
 
 Recorded open choices (unresolved, not settled here):
-- Episode order inside one podcast (newest first or oldest first).
+- Episode order inside one podcast (newest first or oldest first; newest first is a provisional placeholder, per-podcast setting).
+- Whether skipping an episode should count as played (currently it does not).
 - His Spotify mechanism comments are his hypothesis, not verified fact.
 
 Future feature candidate (explicitly future, owner's words): a monthly

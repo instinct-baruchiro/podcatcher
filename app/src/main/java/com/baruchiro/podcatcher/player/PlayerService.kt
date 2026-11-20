@@ -23,7 +23,7 @@ class PlayerService : MediaSessionService() {
     }
 
     /**
-     * Sequential listening: an item left behind (finished or skipped) counts as played, and
+     * Sequential listening: an episode that finished counts as played (a skipped one stays unplayed), and
      * each new item starts with its own podcast's speed and intro skip.
      */
     private inner class QueueListener(private val player: ExoPlayer) : Player.Listener {
@@ -35,8 +35,10 @@ class PlayerService : MediaSessionService() {
         }
 
         override fun onMediaItemTransition(item: MediaItem?, reason: Int) {
-            val moved = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK
-            if (moved) markPlayed(currentId)
+            val finished = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO
+            val moved = finished || reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK
+            // Only an episode that ran to its end counts as played; skipping past it leaves it unplayed.
+            if (finished) markPlayed(currentId)
             currentId = item?.mediaId
             val feed = item?.mediaId?.substringBefore('\n') ?: return
             val policy = Store.podcasts(this@PlayerService).firstOrNull { it.feedUrl == feed }?.policy ?: return
