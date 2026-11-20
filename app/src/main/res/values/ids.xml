@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <item name="convInput" type="id" />
+    <item name="onboardStats" type="id" />
+    <item name="onboardDone" type="id" />
     <item name="convSend" type="id" />
     <item name="queuePlay" type="id" />
     <item name="analyticsSwitch" type="id" />
