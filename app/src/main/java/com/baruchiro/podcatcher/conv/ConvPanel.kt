@@ -12,6 +12,7 @@ import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.view.inputmethod.EditorInfo
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.ScrollView
@@ -31,7 +32,7 @@ import kotlin.math.abs
  * Tools executor; playback stays button-driven (owner direction). Without an
  * API key the NoBackend answers honestly instead of faking a reply.
  */
-class ConvPanel(private val activity: Activity, host: ViewGroup) {
+class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
 
     private val history = mutableListOf<ConvMessage>()
     private var backend: ModelBackend
@@ -40,6 +41,8 @@ class ConvPanel(private val activity: Activity, host: ViewGroup) {
     private val prefs = activity.getSharedPreferences("conv_config", Activity.MODE_PRIVATE)
     private val secrets = SecretStore(activity)
 
+    private val host: ViewGroup = hostView
+    private val sheet: LinearLayout
     private val messages: LinearLayout
     private val scroll: ScrollView
     private val input: EditText
@@ -60,7 +63,7 @@ class ConvPanel(private val activity: Activity, host: ViewGroup) {
 
     init {
         backend = configuredBackend()
-        val sheet = LinearLayout(activity).apply {
+        sheet = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             layoutDirection = View.LAYOUT_DIRECTION_RTL
             background = activity.getDrawable(R.drawable.bg_sheet)
@@ -93,7 +96,7 @@ class ConvPanel(private val activity: Activity, host: ViewGroup) {
             addView(messages)
             visibility = View.GONE
         }
-        sheet.addView(scroll, LinearLayout.LayoutParams(MATCH_PARENT, (activity.resources.displayMetrics.heightPixels * 0.30).toInt()))
+        sheet.addView(scroll, drawerParams(keyboardOpen = false))
 
         val row = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -123,8 +126,30 @@ class ConvPanel(private val activity: Activity, host: ViewGroup) {
         row.addView(send, LinearLayout.LayoutParams(dp(48), dp(48)))
         sheet.addView(row)
 
-        host.addView(sheet, ViewGroup.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        host.addView(sheet, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        // With the keyboard up there is no room for the page and the drawer
+        // together: the conversation takes the whole area above the keyboard.
+        activity.window.decorView.viewTreeObserver.addOnGlobalLayoutListener { applyKeyboardMode() }
         bubble("ספרי לי מה לשנות בהגדרות — למשל כמה פרקים לשמור או באיזה קצב לנגן.", false)
+    }
+
+    private fun drawerParams(keyboardOpen: Boolean) =
+        if (keyboardOpen) LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f)
+        else LinearLayout.LayoutParams(MATCH_PARENT, (activity.resources.displayMetrics.heightPixels * DRAWER_HEIGHT).toInt())
+
+    private var keyboardMode = false
+
+    private fun applyKeyboardMode() {
+        val frame = android.graphics.Rect().also { activity.window.decorView.getWindowVisibleDisplayFrame(it) }
+        val screen = activity.resources.displayMetrics.heightPixels
+        val keyboardOpen = expanded && screen - frame.bottom > screen * 0.15
+        if (keyboardOpen == keyboardMode) return
+        keyboardMode = keyboardOpen
+        val root = host.parent as ViewGroup
+        root.getChildAt(0).visibility = if (keyboardOpen) View.GONE else View.VISIBLE
+        host.layoutParams = LinearLayout.LayoutParams(MATCH_PARENT, if (keyboardOpen) 0 else WRAP_CONTENT, if (keyboardOpen) 1f else 0f)
+        sheet.layoutParams = FrameLayout.LayoutParams(MATCH_PARENT, if (keyboardOpen) MATCH_PARENT else WRAP_CONTENT)
+        scroll.layoutParams = drawerParams(keyboardOpen)
     }
 
     private fun iconButton(icon: Int, label: String, primary: Boolean) = ImageButton(
@@ -222,5 +247,6 @@ class ConvPanel(private val activity: Activity, host: ViewGroup) {
 
     private companion object {
         const val DEFAULT_MODEL = "gemini-3.1-flash-lite"
+        const val DRAWER_HEIGHT = 0.30
     }
 }

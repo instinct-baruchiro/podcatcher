@@ -182,7 +182,7 @@ podcast-domain tools and knowledge — so that it changes the app's behavior
 and settings for me. The conversation drives the app's own settings and
 actions; it does not discuss episode content.
 
-Status: partially implemented (2026-11-19). Built: conversation screen, the
+Status: partially implemented (2026-11-19). Built: the conversation (a composer at the bottom of the library and episode screens that opens into a drawer, no separate screen or button), the
 podcast-domain tool layer (list/search/subscribe/get_policy/set_policy incl.
 global defaults) and the deterministic executor — JVM-tested via a TESTS-ONLY
 stub backend that proves the model-reply→settings wire. Not built: a real
