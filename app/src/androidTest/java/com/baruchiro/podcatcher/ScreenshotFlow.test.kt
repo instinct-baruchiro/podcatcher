@@ -135,7 +135,7 @@ class ScreenshotFlowTest {
 
         // Conversation engine settings: the key is typed on the device, never bundled.
         device.findObject(By.desc("הגדרות מנוע השיחה")).click()
-        assertTrue("settings dialog did not open", device.wait(Until.hasObject(By.clazz("android.widget.EditText").pkg(pkg)), 5_000))
+        assertTrue("settings dialog did not open", device.wait(Until.hasObject(By.text("מנוע שיחה")), 5_000))
         shot("01c-conversation-settings")
         device.pressBack()
         device.wait(Until.hasObject(res("intake")), 5_000)
