@@ -1,4 +1,4 @@
-// @story: SUB-1, LIB-1, PLAY-1, PLAY-2, DL-1, DL-2, QUEUE-1
+// @story: SUB-1, LIB-1, PLAY-1, PLAY-2, DL-1, DL-2, QUEUE-1, REL-1
 package com.baruchiro.podcatcher
 
 import android.app.DownloadManager
