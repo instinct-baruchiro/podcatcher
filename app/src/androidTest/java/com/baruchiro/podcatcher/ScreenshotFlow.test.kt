@@ -1,4 +1,4 @@
-// @story: SUB-1, LIB-1, PLAY-1, PLAY-2, DL-1, DL-2
+// @story: SUB-1, LIB-1, PLAY-1, PLAY-2, DL-1, DL-2, QUEUE-1
 package com.baruchiro.podcatcher
 
 import android.app.DownloadManager
@@ -181,8 +181,11 @@ class ScreenshotFlowTest {
         var onDevice = false
         for (i in 1..180) {
             Thread.sleep(1_000)
-            val btn = device.findObjects(res("download")).firstOrNull()
-            if (btn != null && btn.contentDescription == "במכשיר") { onDevice = true; break }
+            // The row is rebound while the download progresses; a stale handle just means "look again".
+            val done = try {
+                device.findObjects(res("download")).firstOrNull()?.contentDescription == "במכשיר"
+            } catch (e: androidx.test.uiautomator.StaleObjectException) { false }
+            if (done) { onDevice = true; break }
         }
         if (!onDevice) dumpDownloadState()
         assertTrue("download never completed on device", onDevice)
@@ -193,5 +196,26 @@ class ScreenshotFlowTest {
         val localPlaying = awaitPlaying(45, "local")
         shot("07-playing-downloaded")
         assertTrue("local file playback never started", localPlaying)
+
+        // QUEUE-1: the queue screen plays the podcast's unplayed episodes one after another.
+        device.pressBack()
+        device.wait(Until.hasObject(res("queueOpen")), 5_000)
+        device.findObject(res("queueOpen")).click()
+        assertTrue("queue screen did not open", device.wait(Until.hasObject(By.text("תור ההאזנה")), 5_000))
+        assertTrue("queue has no episodes", device.wait(Until.hasObject(By.textStartsWith("1. ")), 60_000))
+        shot("08-queue")
+        device.findObject(res("queuePlay")).click()
+        assertTrue("queue playback never started", awaitPlaying(45, "queue"))
+        val dumpBefore = mediaSessionDump()
+        File(shotsDir, "dumpsys-queue-before.txt").also { it.writeText(dumpBefore); publish(it) }
+        val activeItem = { dump: String -> Regex("active item id=(\\d+)").find(dump)?.groupValues?.get(1)?.toInt() }
+        val queueSize = Regex("queueTitle=null, size=(\\d+)").findAll(dumpBefore).maxOfOrNull { it.groupValues[1].toInt() } ?: 0
+        assertTrue("session queue has $queueSize items, expected several", queueSize > 1)
+        device.executeShellCommand("input keyevent KEYCODE_MEDIA_NEXT")
+        Thread.sleep(3_000)
+        val dumpAfter = mediaSessionDump()
+        File(shotsDir, "dumpsys-queue-after.txt").also { it.writeText(dumpAfter); publish(it) }
+        assertTrue("next did not move to the following episode", activeItem(dumpAfter) == (activeItem(dumpBefore) ?: -1) + 1)
+        shot("09-queue-next")
     }
 }

@@ -9,7 +9,11 @@ data class Policy(
     var autoDownload: Boolean = false,
     var keep: Int = 3,
     var speed: Double = 1.0,
-    var skipIntroSec: Int = 0
+    var skipIntroSec: Int = 0,
+    /** QUEUE-1: 1 plays first; podcasts sharing a number take turns. */
+    var priority: Int = 3,
+    /** QUEUE-1: order of unplayed episodes inside this podcast's turns. */
+    var oldestFirst: Boolean = false
 )
 
 data class Podcast(
@@ -40,7 +44,9 @@ object Store {
                         autoDownload = pol?.optBoolean("autoDownload") ?: false,
                         keep = pol?.optInt("keep", 3) ?: 3,
                         speed = pol?.optDouble("speed", 1.0) ?: 1.0,
-                        skipIntroSec = pol?.optInt("skipIntroSec", 0) ?: 0
+                        skipIntroSec = pol?.optInt("skipIntroSec", 0) ?: 0,
+                        priority = pol?.optInt("priority", 3) ?: 3,
+                        oldestFirst = pol?.optBoolean("oldestFirst") ?: false
                     ),
                     lastSeenGuid = o.optString("lastSeenGuid")
                 )
@@ -64,6 +70,8 @@ object Store {
                             .put("keep", p.policy.keep)
                             .put("speed", p.policy.speed)
                             .put("skipIntroSec", p.policy.skipIntroSec)
+                            .put("priority", p.policy.priority)
+                            .put("oldestFirst", p.policy.oldestFirst)
                     )
                     .put("lastSeenGuid", p.lastSeenGuid)
             )
@@ -113,6 +121,19 @@ object Store {
             .put("speed", p.speed)
             .put("skipIntroSec", p.skipIntroSec)
             .toString()).apply()
+    }
+
+    /** Episodes already listened to or moved past, per feed (QUEUE-1 leaves them out of the queue). */
+    fun playedGuids(ctx: Context, feedUrl: String): Set<String> {
+        val arr = JSONObject(prefs(ctx).getString("played", "{}") ?: "{}").optJSONArray(feedUrl) ?: return emptySet()
+        return (0 until arr.length()).map { arr.getString(it) }.toSet()
+    }
+
+    fun markPlayed(ctx: Context, feedUrl: String, guid: String) {
+        val root = JSONObject(prefs(ctx).getString("played", "{}") ?: "{}")
+        val arr = root.optJSONArray(feedUrl) ?: JSONArray().also { root.put(feedUrl, it) }
+        if ((0 until arr.length()).none { arr.getString(it) == guid }) arr.put(guid)
+        prefs(ctx).edit().putString("played", root.toString()).apply()
     }
 
     private fun downloadsRoot(ctx: Context) = JSONObject(prefs(ctx).getString("downloads", "{}") ?: "{}")

@@ -37,6 +37,9 @@ class MainActivity : Activity() {
         status = findViewById(R.id.status)
         listView = findViewById(R.id.podcasts)
         findViewById<ImageButton>(R.id.go).setOnClickListener { intake() }
+        findViewById<ImageButton>(R.id.queueOpen).setOnClickListener {
+            startActivity(Intent(this, QueueActivity::class.java))
+        }
         conv = ConvPanel(this, findViewById(R.id.convHost))
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED

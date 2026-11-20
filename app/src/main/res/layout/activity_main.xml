@@ -25,6 +25,14 @@
             android:layout_height="wrap_content"
             style="@style/PodTitle"
             android:text="הפודקאסטים שלי" />
+
+        <ImageButton
+            android:id="@+id/queueOpen"
+            style="@style/PodIcon"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:src="@drawable/ic_queue"
+            android:contentDescription="תור ההאזנה" />
     </LinearLayout>
 
     <LinearLayout
