@@ -30,6 +30,16 @@ adb shell am force-stop $P; sleep 2
 adb shell am start -n $P/com.baruchiro.podcatcher.ui.MainActivity >/dev/null 2>&1 || adb shell monkey -p $P 1 >/dev/null 2>&1
 sleep 8
 shot 01-launch
+cur
+if grep -q 'text="סיום"' out/_cur.xml; then python3 - <<'PYTAP'
+import re,subprocess
+x=open('out/_cur.xml',encoding='utf8').read()
+m=re.search(r'text="סיום"[^>]*bounds="\[(\d+),(\d+)\]\[(\d+),(\d+)\]"',x)
+if m:
+    a,b,c,d=map(int,m.groups()); subprocess.run(["adb","shell","input","tap",str((a+c)//2),str((b+d)//2)]); print("onboarding finish tapped")
+else: print("finish bounds not found")
+PYTAP
+sleep 3; fi
 cur; tapid convInput; sleep 2
 adb shell input text 'show%sthe%sdefault%ssettings'
 sleep 1; cur; tapid convSend; sleep 3
