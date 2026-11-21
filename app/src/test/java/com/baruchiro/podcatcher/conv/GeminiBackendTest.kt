@@ -81,7 +81,7 @@ class GeminiBackendTest {
 
         val lib = FakeLib()
         val raw = backend.reply(listOf(ConvMessage(true, "תשמור לכל היותר 3 פרקים")), Tools.SPEC)
-        val confirmation = Tools.execute(JSONObject(raw), lib)
+        val confirmation = Tools.execute(JSONObject(raw), lib).text
         assertTrue(confirmation.contains("ברירות המחדל"))
         assertEquals(3, lib.defaultPolicy().keep)
     }
