@@ -47,7 +47,7 @@ class RealGeminiRobolectricTest {
         val evidence = StringBuilder()
         evidence.append("ASK: $ask\nMODEL_RAW: $raw\n")
 
-        val confirmation = Tools.execute(JSONObject(raw), lib)
+        val confirmation = Tools.execute(JSONObject(raw), lib).text
         evidence.append("EXECUTOR_CONFIRMATION: $confirmation\n")
 
         // Simulated restart: fresh read of persisted state from the store.

@@ -4,6 +4,10 @@
     <item name="onboardStats" type="id" />
     <item name="onboardDone" type="id" />
     <item name="convSend" type="id" />
+    <item name="cardKeepMinus" type="id" />
+    <item name="cardKeepValue" type="id" />
+    <item name="cardKeepPlus" type="id" />
+    <item name="cardAuto" type="id" />
     <item name="queuePlay" type="id" />
     <item name="analyticsSwitch" type="id" />
     <item name="aboutOpen" type="id" />
