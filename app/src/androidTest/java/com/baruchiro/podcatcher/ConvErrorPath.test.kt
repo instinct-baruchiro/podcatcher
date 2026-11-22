@@ -38,6 +38,7 @@ class ConvErrorPathTest {
             )
             device.wait(Until.hasObject(By.res("com.android.permissioncontroller:id/permission_allow_button")), 3_000)
             device.findObject(By.res("com.android.permissioncontroller:id/permission_allow_button"))?.click()
+            device.findObject(By.desc("פתיחת השיחה")).click()
             val input = device.wait(Until.findObject(By.res(pkg, "convInput")), 5_000)
             assertNotNull("chat input not found", input)
             input!!.text = "בדיקת חיבור"
