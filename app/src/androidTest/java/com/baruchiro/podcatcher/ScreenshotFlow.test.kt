@@ -109,6 +109,9 @@ class ScreenshotFlowTest {
 
     @Test
     fun subscribePlayAndDownload() {
+        // Other device tests (QueueFlow) may have played media in this process
+        // lifetime; a fresh launch is the only honest way to assert the idle bar.
+        device.executeShellCommand("am force-stop " + pkg)
         // Launch the app.
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val launch = context.packageManager.getLaunchIntentForPackage(pkg)!!
