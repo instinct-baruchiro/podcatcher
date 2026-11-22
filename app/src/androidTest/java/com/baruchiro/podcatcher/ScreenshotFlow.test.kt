@@ -118,8 +118,11 @@ class ScreenshotFlowTest {
         val sessionFuture = androidx.media3.session.MediaController.Builder(context, token).buildAsync()
         try {
             val c = sessionFuture.get(10, java.util.concurrent.TimeUnit.SECONDS)
-            c.stop()
-            c.clearMediaItems()
+            // MediaController calls must run on its application looper (the main thread).
+            InstrumentationRegistry.getInstrumentation().runOnMainSync {
+                c.stop()
+                c.clearMediaItems()
+            }
         } finally {
             androidx.media3.session.MediaController.releaseFuture(sessionFuture)
         }
