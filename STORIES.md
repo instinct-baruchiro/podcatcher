@@ -95,6 +95,25 @@ Status: implemented; automated coverage pending.
 
 <!-- @unimplemented -->
 
+## PLAY-4 — A player is always part of the app
+
+As a listener, I want a media player bar that is always part of the app — fixed
+at the bottom of the listening screens, even before anything plays — so that a
+podcast app always has a player: what is playing, play/pause and progress, not
+only a play button per episode and the system notification.
+
+Owner voice, 2026-11-22: "זה באפליקציית פודקאסטים, אז חייב להיות פלייר. זה תמיד
+חייב להיות... קודם כל צריך לשים פלייר, מדיה פלייר."
+
+Status: implemented; covered in the on-device flow (idle bar at launch; the bar
+names the playing episode and pauses/resumes the real session).
+
+Acceptance:
+- The player bar is always visible on the library, episodes and queue screens,
+  including an idle state before the first episode plays.
+- During playback it shows the episode and podcast, elapsed/total time and a
+  progress line, and its button pauses/resumes the shared session.
+
 ## DL-1 — Download an episode to the device
 
 As a listener, I want a download button on every episode so that I can keep
@@ -215,6 +234,28 @@ Acceptance:
 - Card edits (keep-N stepper, auto-download toggle) write through to the store.
 - A conversational set_policy updates the visible cards to the new state.
 
+## CONV-3 — The conversation never opens by itself; first-run content waits for the first opened conversation
+
+As a listener, I don't want the chat to open on its own when the app starts or
+to keep showing me the default state; I want the onboarding questions and the
+defaults to appear in the first conversation I actually open, and to surface
+again only when they are relevant.
+
+Owner voice, 2026-11-22: "הצ'אט עכשיו כשאני פותח את האפליקציה הוא תמיד פתוח
+ותמיד כתוב בו מה המצב ברירת מחדל. לא צריך לדעת את זה כל הזמן, רק מתי שזה
+רלוונטי... בשיחה הראשונה שאני אפתח, אז יהיה צריך לשאול אותי את השאלות או
+להציג לי את הברירת מחדל כשזה יהיה רלוונטי."
+
+Status: implemented; covered in the on-device flow (launch is closed and quiet;
+opening the drawer the first time shows the defaults lead and the stats choice).
+
+Acceptance:
+- App start never expands the conversation and never adds startup messages.
+- The first conversation the listener opens carries the first-run content
+  (default rules in force, usage-stats choice); once done, it does not repeat.
+- Defaults still surface in context where relevant: the subscribe readback
+  card (CONV-2).
+
 ## QUEUE-1 — Deterministic listening queue (future) and starvation hints
 
 As a listener, I want a listening queue built on clear deterministic rules —
@@ -275,6 +316,8 @@ owner's PostHog project (events only, no person profiles, user switch in
 About, off under test runs). On by default since the owner's 2026-11-20 14:18
 instruction, but only after a first-run chat has shown the notice and recorded
 the choice (preselected, can be unchecked there); an earlier opt-out is kept.
+Since 2026-11-22 (owner voice, CONV-3) that first-run chat appears in the first
+conversation the listener opens, not at app launch.
 The same first-run chat states the default rules in force (no download or
 retention questions; the owner accepts product-chosen defaults at 14:26) and
 subscribing reads back the rules actually stored plus how to change them for

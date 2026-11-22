@@ -50,6 +50,7 @@ class PodcastActivity : Activity() {
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var bindingPolicy = false
     private lateinit var conv: ConvPanel
+    private lateinit var playerBar: PlayerBar
 
     // Refresh episode rows when a system download completes.
     private val dlReceiver = object : BroadcastReceiver() {
@@ -68,6 +69,7 @@ class PodcastActivity : Activity() {
 
         status = findViewById(R.id.status)
         listView = findViewById(R.id.episodes)
+        playerBar = PlayerBar(this, findViewById(R.id.playerHost))
         conv = ConvPanel(this, findViewById(R.id.convHost))
         findViewById<TextView>(R.id.ptitle).text = podcast.title
         artwork.into(findViewById(R.id.art), podcast.artwork)
@@ -124,6 +126,7 @@ class PodcastActivity : Activity() {
     }
 
     override fun onDestroy() {
+        if (::playerBar.isInitialized) playerBar.release()
         controllerFuture?.let { MediaController.releaseFuture(it) }
         unregisterReceiver(dlReceiver)
         super.onDestroy()

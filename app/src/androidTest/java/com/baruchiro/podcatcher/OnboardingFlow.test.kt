@@ -1,4 +1,4 @@
-// @story: REL-1, CONV-1
+// @story: REL-1, CONV-1, CONV-3
 package com.baruchiro.podcatcher
 
 import android.content.Context
@@ -16,7 +16,11 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/** First-run chat on a device: states the default rules in force, records only the usage-stats choice. */
+/**
+ * First-run content on a device (CONV-3): the app launches with a closed, quiet
+ * conversation; the default rules and the usage-stats choice appear in the first
+ * conversation the listener opens, and only the stats choice is recorded.
+ */
 @RunWith(AndroidJUnit4::class)
 class OnboardingFlowTest {
 
@@ -32,8 +36,15 @@ class OnboardingFlowTest {
         Store.setDefaultPolicy(ctx, com.baruchiro.podcatcher.data.Policy())
 
         ctx.startActivity(ctx.packageManager.getLaunchIntentForPackage(pkg)!!.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK))
+        assertNotNull("library did not load", device.wait(Until.findObject(By.res(pkg, "intake")), 10_000))
+        // CONV-3: launch shows a closed conversation with no default-state messages.
+        assertTrue("conversation must not open by itself at launch",
+            device.wait(Until.gone(By.textContains("ברירת מחדל לפודקאסט חדש")), 5_000))
+        shot(device, ctx, "onb-0-launch-closed")
+        // The listener opens the conversation for the first time: the first-run content lives there.
+        device.findObject(By.desc("מגירת השיחה")).click()
         // The drawer opens on the lead (the default rules), not on the checkbox below it.
-        assertNotNull("default rules not shown at the top of the first-run chat",
+        assertNotNull("default rules not shown at the top of the first opened conversation",
             device.wait(Until.findObject(By.textContains("ברירת מחדל לפודקאסט חדש")), 15_000))
         shot(device, ctx, "onb-1b-defaults")
         // The stats choice sits below the lead: scroll down to it.
