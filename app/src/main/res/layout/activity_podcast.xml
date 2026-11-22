@@ -155,12 +155,12 @@
     </LinearLayout>
 
     <FrameLayout
-        android:id="@+id/playerHost"
+        android:id="@+id/convHost"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
     <FrameLayout
-        android:id="@+id/convHost"
+        android:id="@+id/playerHost"
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 </LinearLayout>
