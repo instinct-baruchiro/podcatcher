@@ -113,19 +113,27 @@ class ScreenshotFlowTest {
         // QueueFlow runs earlier and leaves a loaded session in the app process;
         // clear it through a real controller (never force-stop under instrumentation)
         // so the launch below starts from the same state a fresh install shows.
-        val token = androidx.media3.session.SessionToken(context,
-            android.content.ComponentName(context, com.baruchiro.podcatcher.player.PlayerService::class.java))
-        val sessionFuture = androidx.media3.session.MediaController.Builder(context, token).buildAsync()
-        try {
-            val c = sessionFuture.get(10, java.util.concurrent.TimeUnit.SECONDS)
-            // MediaController calls must run on its application looper (the main thread).
-            InstrumentationRegistry.getInstrumentation().runOnMainSync {
-                c.stop()
-                c.clearMediaItems()
-            }
-        } finally {
-            androidx.media3.session.MediaController.releaseFuture(sessionFuture)
+        // A MediaController answers only on the thread whose looper built it, so the
+        // build and every call happen on one dedicated HandlerThread.
+        val mediaThread = android.os.HandlerThread("screenshot-flow-media").apply { start() }
+        val mediaHandler = android.os.Handler(mediaThread.looper)
+        val cleared = java.util.concurrent.CountDownLatch(1)
+        mediaHandler.post {
+            val token = androidx.media3.session.SessionToken(context,
+                android.content.ComponentName(context, com.baruchiro.podcatcher.player.PlayerService::class.java))
+            val future = androidx.media3.session.MediaController.Builder(context, token).buildAsync()
+            future.addListener({
+                try {
+                    val c = future.get()
+                    c.stop()
+                    c.clearMediaItems()
+                } catch (e: Exception) { /* no session to clear: already idle */ }
+                androidx.media3.session.MediaController.releaseFuture(future)
+                cleared.countDown()
+            }, { r -> mediaHandler.post(r) })
         }
+        cleared.await(20, java.util.concurrent.TimeUnit.SECONDS)
+        mediaThread.quitSafely()
         // Launch the app.
         val launch = context.packageManager.getLaunchIntentForPackage(pkg)!!
             .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
