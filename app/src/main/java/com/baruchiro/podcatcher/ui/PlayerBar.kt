@@ -91,6 +91,9 @@ class PlayerBar(private val activity: Activity, host: ViewGroup) {
             id = R.id.playerTime
             textSize = 12f
             setTextColor(activity.getColor(R.color.textSecondary))
+            // Elapsed/total is a numeric readout; keep it LTR ("0:02 / 50:44") like every
+            // mainstream player, instead of letting RTL bidi flip the two numbers.
+            textDirection = View.TEXT_DIRECTION_LTR
         }
         val texts = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
