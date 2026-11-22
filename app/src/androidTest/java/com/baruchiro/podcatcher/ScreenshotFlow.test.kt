@@ -109,11 +109,21 @@ class ScreenshotFlowTest {
 
     @Test
     fun subscribePlayAndDownload() {
-        // Other device tests (QueueFlow) may have played media in this process
-        // lifetime; a fresh launch is the only honest way to assert the idle bar.
-        device.executeShellCommand("am force-stop " + pkg)
-        // Launch the app.
         val context = InstrumentationRegistry.getInstrumentation().targetContext
+        // QueueFlow runs earlier and leaves a loaded session in the app process;
+        // clear it through a real controller (never force-stop under instrumentation)
+        // so the launch below starts from the same state a fresh install shows.
+        val token = androidx.media3.session.SessionToken(context,
+            android.content.ComponentName(context, com.baruchiro.podcatcher.player.PlayerService::class.java))
+        val sessionFuture = androidx.media3.session.MediaController.Builder(context, token).buildAsync()
+        try {
+            val c = sessionFuture.get(10, java.util.concurrent.TimeUnit.SECONDS)
+            c.stop()
+            c.clearMediaItems()
+        } finally {
+            androidx.media3.session.MediaController.releaseFuture(sessionFuture)
+        }
+        // Launch the app.
         val launch = context.packageManager.getLaunchIntentForPackage(pkg)!!
             .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
         context.startActivity(launch)
