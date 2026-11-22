@@ -77,6 +77,15 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
     var expanded = false
         private set
 
+    private val fab: ImageButton by lazy {
+        ImageButton(activity, null, 0, R.style.PodIcon_Primary).apply {
+            id = R.id.convFab
+            setImageResource(R.drawable.ic_chat)
+            contentDescription = "פתיחת השיחה"
+            setOnClickListener { setExpanded(true) }
+        }
+    }
+
     private fun dp(v: Int): Int = (v * activity.resources.displayMetrics.density).toInt()
 
     private fun configuredBackend(): ModelBackend {
@@ -154,6 +163,13 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
         sheet.addView(row)
 
         host.addView(sheet, FrameLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
+        // FAB variant (visual candidate for the owner): collapsed is a floating
+        // button; the full sheet (handle, messages, composer) appears on tap.
+        sheet.visibility = View.GONE
+        host.addView(fab, FrameLayout.LayoutParams(dp(56), dp(56), Gravity.BOTTOM or Gravity.END).apply {
+            bottomMargin = dp(16)
+            marginEnd = dp(16)
+        })
         // With the keyboard up there is no room for the page and the drawer
         // together: the conversation takes the whole area above the keyboard.
         activity.window.decorView.viewTreeObserver.addOnGlobalLayoutListener { applyKeyboardMode() }
@@ -245,6 +261,8 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
     fun setExpanded(open: Boolean) {
         if (open == expanded) return
         expanded = open
+        sheet.visibility = if (open) View.VISIBLE else View.GONE
+        fab.visibility = if (open) View.GONE else View.VISIBLE
         scroll.visibility = if (open) View.VISIBLE else View.GONE
         if (open) {
             // CONV-3: the defaults and the first-run questions live in the first

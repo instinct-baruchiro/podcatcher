@@ -42,7 +42,7 @@ class OnboardingFlowTest {
             device.wait(Until.gone(By.textContains("ברירת מחדל לפודקאסט חדש")), 5_000))
         shot(device, ctx, "onb-0-launch-closed")
         // The listener opens the conversation for the first time: the first-run content lives there.
-        device.findObject(By.desc("מגירת השיחה")).click()
+        device.findObject(By.desc("פתיחת השיחה")).click()
         // The drawer opens on the lead (the default rules), not on the checkbox below it.
         assertNotNull("default rules not shown at the top of the first opened conversation",
             device.wait(Until.findObject(By.textContains("ברירת מחדל לפודקאסט חדש")), 15_000))
