@@ -17,6 +17,7 @@ import android.widget.TextView
 import com.baruchiro.podcatcher.R
 import com.baruchiro.podcatcher.telemetry.Analytics
 import com.baruchiro.podcatcher.conv.ConvPanel
+import com.baruchiro.podcatcher.data.Opml
 import com.baruchiro.podcatcher.data.Podcast
 import com.baruchiro.podcatcher.data.Store
 import com.baruchiro.podcatcher.net.Discovery
@@ -45,6 +46,12 @@ class MainActivity : Activity() {
         findViewById<ImageButton>(R.id.aboutOpen).setOnClickListener {
             startActivity(Intent(this, AboutActivity::class.java))
         }
+        findViewById<ImageButton>(R.id.importOpen).setOnClickListener {
+            startActivityForResult(
+                Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"),
+                REQ_IMPORT
+            )
+        }
         Analytics.get(this).capture("podcatcher_app_open")
         playerBar = PlayerBar(this, findViewById(R.id.playerHost))
         conv = ConvPanel(this, findViewById(R.id.convHost))
@@ -54,6 +61,38 @@ class MainActivity : Activity() {
             requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
         }
         FeedRefreshWorker.schedule(this)
+    }
+
+    @Deprecated("Result of the OPML file picker")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        val uri = data?.data
+        if (requestCode == REQ_IMPORT && resultCode == RESULT_OK && uri != null) importOpml(uri)
+    }
+
+    private fun importOpml(uri: android.net.Uri) {
+        say("קורא את הקובץ…")
+        io.execute {
+            val feeds = try {
+                contentResolver.openInputStream(uri)!!.use { Opml.parse(it) }
+            } catch (e: Exception) {
+                runOnUiThread { say("לא הצלחתי לקרוא את הקובץ. צריך קובץ OPML של המינויים (ב-Podcast Addict: הגדרות, גיבוי ושחזור, ייצוא OPML).") }
+                return@execute
+            }
+            var added = 0; var existing = 0; var failed = 0
+            feeds.forEachIndexed { i, f ->
+                say("מייבא ${i + 1}/${feeds.size}: ${f.title}")
+                try {
+                    val info = Discovery.fetchFeed(f.feedUrl, 1)
+                    if (Store.addPodcast(this, Podcast(f.feedUrl, info.title, info.author, info.artwork, Store.defaultPolicy(this)))) added++ else existing++
+                } catch (e: Exception) { failed++ }
+            }
+            Analytics.get(this).capture("podcatcher_opml_import")
+            runOnUiThread {
+                say("יובאו $added פודקאסטים" + (if (existing > 0) ", $existing כבר היו בספרייה" else "") + (if (failed > 0) ", $failed לא נטענו" else "") + ".")
+                render()
+            }
+        }
     }
 
     @Deprecated("Back closes the open conversation drawer first")
@@ -181,4 +220,6 @@ class MainActivity : Activity() {
             return v
         }
     }
+
+    private companion object { const val REQ_IMPORT = 7 }
 }
