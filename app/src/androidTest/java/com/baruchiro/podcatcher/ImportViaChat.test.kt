@@ -10,6 +10,8 @@ import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.uiautomator.By
 import androidx.test.uiautomator.UiDevice
 import androidx.test.uiautomator.Until
+import com.baruchiro.podcatcher.data.Podcast
+import com.baruchiro.podcatcher.data.Store
 import com.baruchiro.podcatcher.ui.MainActivity
 import java.io.File
 import org.json.JSONObject
@@ -80,6 +82,48 @@ class ImportViaChatTest {
             assertNotNull("chat walkthrough missing",
                 device.wait(Until.findObject(By.textContains("OPML")), 5_000))
             shot("import-2-chat-walkthrough")
+        } finally {
+            scenario.close()
+        }
+    }
+
+    @Test
+    fun removeAsksForConfirmationInChatThenRemoves() {
+        val feed = "https://remove-chat.example/feed"
+        Store.addPodcast(appContext, Podcast(feed, "פודקאסט למחיקה", "", ""))
+        val scenario = ActivityScenario.launch(MainActivity::class.java)
+        try {
+            device.wait(Until.hasObject(By.res("com.android.permissioncontroller:id/permission_allow_button")), 3_000)
+            device.findObject(By.res("com.android.permissioncontroller:id/permission_allow_button"))?.click()
+            scenario.onActivity {
+                it.conv.renderModelOutputForTest(JSONObject("""{"say":"","tool":"remove_podcast","args":{"feedUrl":"$feed"}}"""))
+            }
+            assertNotNull("no confirmation question",
+                device.wait(Until.findObject(By.textContains("להסיר את")), 8_000))
+            assertTrue("removed without a yes", Store.podcasts(appContext).any { it.feedUrl == feed })
+            shot("chat-remove-confirm")
+            scenario.onActivity {
+                it.conv.renderModelOutputForTest(JSONObject("""{"say":"","tool":"remove_podcast","args":{"feedUrl":"$feed","confirmed":true}}"""))
+            }
+            assertNotNull("no removal confirmation",
+                device.wait(Until.findObject(By.textContains("הסרתי את")), 8_000))
+            assertTrue("still subscribed", Store.podcasts(appContext).none { it.feedUrl == feed })
+            shot("chat-remove-done")
+        } finally {
+            Store.removePodcast(appContext, feed)
+            scenario.close()
+        }
+    }
+
+    @Test
+    fun waitingForTheModelShowsATypingIndicator() {
+        val scenario = ActivityScenario.launch(MainActivity::class.java)
+        try {
+            device.wait(Until.hasObject(By.res("com.android.permissioncontroller:id/permission_allow_button")), 3_000)
+            device.findObject(By.res("com.android.permissioncontroller:id/permission_allow_button"))?.click()
+            scenario.onActivity { it.conv.showWaitingForTest() }
+            assertNotNull("typing indicator missing", device.wait(Until.findObject(By.textStartsWith("חושבת")), 5_000))
+            shot("chat-typing-indicator")
         } finally {
             scenario.close()
         }

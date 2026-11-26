@@ -26,7 +26,7 @@ class GeminiBackend(
 
     override suspend fun reply(history: List<ConvMessage>, toolSpec: String): String {
         val system = """
-את המנוע השיחתי של אפליקציית פודקאסטים. תפקידך: לנהל שיחה בעברית על האפליקציה — מנויים, הורדות, שמירת פרקים, מהירות, דילוג פתיח, תור ההאזנה, נגן, ייבוא, אודות. כל דבר שאפשר לעשות באפליקציה אפשר לבקש כאן; השתמשי בכלי המתאים ואל תגידי שאי אפשר. השיחה אינה עוסקת בתוכן פרקים, והשמעה נשארת בכפתורים.
+את המנוע השיחתי של אפליקציית פודקאסטים. תפקידך: לנהל שיחה בעברית על האפליקציה — מנויים, הורדות, שמירת פרקים, מהירות, דילוג פתיח, תור ההאזנה, נגן, ייבוא, אודות. כל דבר שאפשר לעשות באפליקציה אפשר לבקש כאן; השתמשי בכלי המתאים ואל תגידי שאי אפשר. חוק קבוע של הבעלים: אין עיסוק בתוכן הפרקים. אל תסכמי, תמליצי, תנתחי או תענה על מה שנאמר בפרקים; ענייני האפליקציה בלבד. אם מבקשים זאת, אמרי שכרגע הצ'אט מנהל רק את האפליקציה.
 ענה תמיד ב-JSON טהור בלבד (בלי markdown, בלי הסברים מסביב), באחד משני מבנים:
 {"say": "תשובה חופשית בעברית"}
 {"say": "מה שתגידי למשתמש", "tool": "<שם כלי>", "args": {...}}
@@ -55,13 +55,22 @@ $toolSpec
             .post(body.toString().toRequestBody("application/json".toMediaType()))
             .build()
 
-        val parsed = client.newCall(req).execute().use { resp ->
-            if (!resp.isSuccessful) {
-                return JSONObject().put("say", "המנוע לא זמין כרגע (HTTP ${resp.code}).").toString()
+        var parsed: JSONObject? = null
+        var lastCode = 0
+        for (attempt in 1..MAX_ATTEMPTS) {
+            try {
+                client.newCall(req).execute().use { resp ->
+                    lastCode = resp.code
+                    if (resp.isSuccessful) parsed = JSONObject(resp.body?.string() ?: "")
+                }
+            } catch (e: java.io.IOException) {
+                lastCode = -1
             }
-            JSONObject(resp.body?.string() ?: "")
+            if (parsed != null || lastCode !in RETRYABLE) break
+            if (attempt < MAX_ATTEMPTS) kotlinx.coroutines.delay(1500L * attempt)
         }
-        val text = parsed.optJSONArray("candidates")
+        val ok = parsed ?: return JSONObject().put("say", failureMessage(lastCode)).toString()
+        val text = ok.optJSONArray("candidates")
             ?.optJSONObject(0)
             ?.optJSONObject("content")
             ?.optJSONArray("parts")
@@ -70,4 +79,18 @@ $toolSpec
         return text?.takeIf { it.isNotBlank() }
             ?: JSONObject().put("say", "המנוע לא החזיר תשובה.").toString()
     }
+
+    private companion object {
+        const val MAX_ATTEMPTS = 3
+        val RETRYABLE = setOf(-1, 429, 500, 502, 503, 504)
+    }
+}
+
+/** Plain Hebrew reason for a failed model call; the code is kept for support. */
+internal fun failureMessage(code: Int): String = when (code) {
+    -1 -> "אין חיבור למודל כרגע (בדקי אינטרנט). נסי שוב."
+    429 -> "המכסה של המודל התמלאה כרגע (HTTP 429). נסי שוב בעוד כמה דקות."
+    500, 502, 503, 504 -> "המודל של גוגל עמוס או לא זמין כרגע (HTTP $code), ניסיתי שלוש פעמים. נסי שוב בעוד דקה."
+    401, 403 -> "המפתח של המודל לא התקבל (HTTP $code)."
+    else -> "המנוע לא זמין כרגע (HTTP $code)."
 }

@@ -61,6 +61,10 @@ class MainActivity : Activity() {
     internal fun refreshLibrary() = render()
 
     /** Chat-driven player control. Returns false when nothing is loaded. */
+    internal fun playItems(items: List<androidx.media3.common.MediaItem>, start: Int, skipMs: Long, speed: Float) =
+        playerBar.playItems(items, start, skipMs, speed)
+    internal fun seekPlayer(seconds: Int, relative: Boolean) = playerBar.seek(seconds, relative)
+
     internal fun playerCommand(action: String): Boolean = playerBar.command(action)
 
     /** In-app steps for exporting an OPML file, then the file picker. Also opened from the conversation. */

@@ -26,7 +26,9 @@ import android.widget.TextView
 import com.baruchiro.podcatcher.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import kotlin.math.abs
@@ -341,13 +343,44 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
         bubble(text, true)
         store("user", text)
         scope.launch {
-            val raw = withContext(Dispatchers.IO) { backend.reply(history, Tools.SPEC) }
+            val waiting = showWaiting()
+            val raw = try {
+                withTimeoutOrNull(WAIT_LIMIT_MS) { withContext(Dispatchers.IO) { backend.reply(history, Tools.SPEC) } }
+            } finally {
+                messages.removeView(waiting.view); waiting.job.cancel()
+            } ?: JSONObject().put("say", "המנוע לא ענה תוך דקה. אפשר לנסות שוב.").toString()
             val json = runCatching { JSONObject(raw) }.getOrElse {
                 JSONObject().put("say", "התקבלה תשובה לא תקינה מהמנוע.")
             }
             val result = withContext(Dispatchers.IO) { Tools.execute(json, lib) }
             renderResult(result)
         }
+    }
+
+    private class Waiting(val view: TextView, val job: kotlinx.coroutines.Job)
+
+    /** Typing indicator: a bubble with animated dots and a seconds counter, so a slow reply never looks stuck. */
+    private fun showWaiting(): Waiting {
+        val tv = TextView(activity).apply {
+            textSize = 16f
+            setPadding(dp(16), dp(11), dp(16), dp(11))
+            background = activity.getDrawable(R.drawable.bg_bubble_app)
+            setTextColor(activity.getColor(R.color.textSecondary))
+            contentDescription = "ממתין לתשובה"
+            text = "חושבת."
+        }
+        messages.addView(tv, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.END; bottomMargin = dp(10) })
+        scroll.post { scroll.fullScroll(ScrollView.FOCUS_DOWN) }
+        val job = scope.launch {
+            var sec = 0
+            while (true) {
+                delay(500)
+                sec++
+                val dots = ".".repeat(sec % 3 + 1)
+                tv.text = if (sec >= 8) "חושבת$dots (${sec / 2} שנ׳, עוד רגע)" else "חושבת$dots"
+            }
+        }
+        return Waiting(tv, job)
     }
 
     private fun renderResult(result: ExecResult) {
@@ -362,6 +395,9 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
         // A change made in words re-renders every visible card to the stored state (CONV-2).
         rebindCards()
     }
+
+    /** androidTest entry: shows the typing indicator the way a pending model call does. */
+    internal fun showWaitingForTest() { setExpanded(true); showWaiting() }
 
     /** androidTest entry: runs the same execute→render path a real backend reply takes. */
     internal fun renderModelOutputForTest(raw: JSONObject) {
@@ -504,6 +540,7 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
     }
 
     private companion object {
+        const val WAIT_LIMIT_MS = 60_000L
         const val DEFAULT_MODEL = "gemini-3.1-flash-lite"
         const val DRAWER_HEIGHT = 0.30
         @Volatile var onboardingShownThisProcess = false

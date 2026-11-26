@@ -29,6 +29,25 @@ class GeminiBackendTest {
         )
 
     @Test
+    fun `a 503 is retried and the next good reply is used`() = runBlocking {
+        server.enqueue(MockResponse().setResponseCode(503))
+        server.enqueue(geminiReply(JSONObject().put("say", "חזרתי").toString()))
+        val backend = GeminiBackend("k", "m", server.url("/v1beta").toString())
+        val out = backend.reply(listOf(ConvMessage(true, "היי")), Tools.SPEC)
+        assertEquals("חזרתי", JSONObject(out).getString("say"))
+        assertEquals(2, server.requestCount)
+    }
+
+    @Test
+    fun `persistent 503 ends in a clear message after three tries`() = runBlocking {
+        repeat(3) { server.enqueue(MockResponse().setResponseCode(503)) }
+        val backend = GeminiBackend("k", "m", server.url("/v1beta").toString())
+        val say = JSONObject(backend.reply(listOf(ConvMessage(true, "היי")), Tools.SPEC)).getString("say")
+        assertTrue(say.contains("עמוס") && say.contains("503"))
+        assertEquals(3, server.requestCount)
+    }
+
+    @Test
     fun `sends tool spec, history and key, returns model text`() = runBlocking {
         server.enqueue(geminiReply(JSONObject().put("say", "בסדר").toString()))
         val backend = GeminiBackend("test-key", "gemini-3.1-flash-lite", server.url("/v1beta").toString())
@@ -88,7 +107,7 @@ class GeminiBackendTest {
 
     @Test
     fun `http error degrades honestly`() = runBlocking {
-        server.enqueue(MockResponse().setResponseCode(429))
+        repeat(3) { server.enqueue(MockResponse().setResponseCode(429)) }
         val backend = GeminiBackend("k", "m", server.url("/v1beta").toString())
         val out = JSONObject(backend.reply(listOf(ConvMessage(true, "x")), Tools.SPEC))
         assertTrue(out.getString("say").contains("429"))
