@@ -61,3 +61,10 @@ that `Closes #N`. Not active yet: this repo doesn't track issues so far.
 Every user-facing action must also be doable through the conversation. A new button, setting or screen
 needs a chat tool in `conv/Tools.kt`, an entry in `ChatPaths.FEATURES`, and the updated handler count in
 `ChatPaths.UI_HANDLER_COUNTS`. `ChatReachabilityTest` fails otherwise.
+
+## No AI on the content (owner rule, stated repeatedly, last 2026-11-26 18:14)
+For now the app does not deal with episode content. The chat/model only manages the app: subscriptions,
+import, settings, queue, playback controls, downloads. It must not generate, summarize, recommend, analyse
+or answer questions about what is said in episodes. Episode titles/dates from the feed are listing data, not
+content analysis. Content AI is a later stage and needs the owner's explicit go-ahead. Do not add tools,
+prompts or features that read transcripts or episode audio. Agents: this is a standing rule, do not ask again.
