@@ -1,4 +1,4 @@
-// @story: SUB-1, LIB-1, PLAY-1, PLAY-2, DL-1, DL-2, QUEUE-1, REL-1
+// @story: SUB-1, LIB-1, PLAY-1, PLAY-2, PLAY-4, DL-1, DL-2, QUEUE-1, REL-1, CONV-3
 package com.baruchiro.podcatcher
 
 import android.app.DownloadManager
@@ -109,8 +109,32 @@ class ScreenshotFlowTest {
 
     @Test
     fun subscribePlayAndDownload() {
-        // Launch the app.
         val context = InstrumentationRegistry.getInstrumentation().targetContext
+        // QueueFlow runs earlier and leaves a loaded session in the app process;
+        // clear it through a real controller (never force-stop under instrumentation)
+        // so the launch below starts from the same state a fresh install shows.
+        // A MediaController answers only on the thread whose looper built it, so the
+        // build and every call happen on one dedicated HandlerThread.
+        val mediaThread = android.os.HandlerThread("screenshot-flow-media").apply { start() }
+        val mediaHandler = android.os.Handler(mediaThread.looper)
+        val cleared = java.util.concurrent.CountDownLatch(1)
+        mediaHandler.post {
+            val token = androidx.media3.session.SessionToken(context,
+                android.content.ComponentName(context, com.baruchiro.podcatcher.player.PlayerService::class.java))
+            val future = androidx.media3.session.MediaController.Builder(context, token).buildAsync()
+            future.addListener({
+                try {
+                    val c = future.get()
+                    c.stop()
+                    c.clearMediaItems()
+                } catch (e: Exception) { /* no session to clear: already idle */ }
+                androidx.media3.session.MediaController.releaseFuture(future)
+                cleared.countDown()
+            }, { r -> mediaHandler.post(r) })
+        }
+        cleared.await(20, java.util.concurrent.TimeUnit.SECONDS)
+        mediaThread.quitSafely()
+        // Launch the app.
         val launch = context.packageManager.getLaunchIntentForPackage(pkg)!!
             .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
         context.startActivity(launch)
@@ -123,6 +147,15 @@ class ScreenshotFlowTest {
 
         device.wait(Until.hasObject(res("intake")), 10_000)
         shot("01-library-empty")
+
+        // PLAY-4: the player bar is part of the app from launch, idle before anything plays.
+        assertTrue("player bar missing at launch", device.hasObject(res("playerToggle")))
+        assertTrue("player bar should be idle before anything plays",
+            device.hasObject(By.textContains("עוד לא מתנגן")))
+        // CONV-3: the conversation stays closed and quiet at launch — no default-state messages.
+        assertTrue("conversation must not speak at launch",
+            !device.hasObject(By.textContains("ברירת מחדל לפודקאסט חדש")))
+        shot("01a-player-idle")
 
         // REL-1: the header info icon opens the About screen with the creator credit.
         device.findObject(res("aboutOpen")).click()
@@ -180,6 +213,18 @@ class ScreenshotFlowTest {
         device.findObjects(res("play")).first().click()
         val playing = awaitPlaying(45, "stream")
         shot("04-playing")
+
+        // PLAY-4: the persistent player bar follows the session here on the episodes screen too.
+        val barTitle = device.wait(Until.findObject(res("playerTitle")), 5_000)
+        assertNotNull("player bar missing while playing", barTitle)
+        assertTrue("player bar should name the playing episode, not the idle state",
+            barTitle.text.isNotBlank() && !barTitle.text.contains("עוד לא מתנגן"))
+        device.findObject(res("playerToggle")).click()
+        Thread.sleep(2_000)
+        assertTrue("player bar pause did not pause the session", !isPlaying(mediaSessionDump()))
+        shot("04c-player-paused")
+        device.findObject(res("playerToggle")).click()
+        assertTrue("player bar resume did not restart the session", awaitPlaying(20, "resume"))
         device.findObject(res("convInput")).click()
         Thread.sleep(1_000)
         shot("04b-conversation-while-playing")

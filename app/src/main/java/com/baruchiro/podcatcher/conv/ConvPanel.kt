@@ -157,12 +157,14 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
         // With the keyboard up there is no room for the page and the drawer
         // together: the conversation takes the whole area above the keyboard.
         activity.window.decorView.viewTreeObserver.addOnGlobalLayoutListener { applyKeyboardMode() }
-        if (!maybeOnboard()) bubble("ספרי לי מה לשנות בהגדרות — למשל כמה פרקים לשמור או באיזה קצב לנגן.", false)
+        // CONV-3: nothing opens or speaks at startup (owner voice 2026-11-22).
     }
 
-    // ---- First-run chat: shows the default rules in force and the usage-stats choice. Asks no download/keep questions. ----
+    // ---- First-run content: shown in the first conversation the listener opens, ----
+    // ---- not at app launch. States the default rules in force and asks only the ----
+    // ---- usage-stats choice; no download/keep questions. ----
 
-    private fun maybeOnboard(): Boolean {
+    private fun ensureOnboarding(): Boolean {
         val due = !prefs.getBoolean("onboarding_done", false) && !onboardingShownThisProcess &&
             (!Analytics.runningUnderTest() || prefs.getBoolean("onboarding_force", false))
         if (!due) return false
@@ -171,26 +173,24 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
         bubble("ברירת מחדל לפודקאסט חדש: " + Tools.essentialRules(d.autoDownload, d.keep, d.oldestFirst) +
             ". בכל הרשמה אראה מה הוחל, ואפשר לשנות לפודקאסט אחד בלבד. מנויים קיימים לא משתנים.", false)
         askStats()
-        // Open on the lead (the default rules), not on the checkbox at the bottom.
-        post {
-            setExpanded(true)
-            // Wait for the first real layout of the opened drawer: earlier posted scroll-to-bottom
-            // calls ran before it was laid out, and left the lead above the fold.
-            scroll.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
-                override fun onGlobalLayout() {
-                    if (scroll.height == 0 || messages.height == 0) return
-                    scroll.viewTreeObserver.removeOnGlobalLayoutListener(this)
-                    scroll.post { scroll.scrollTo(0, 0) }
-                }
-            })
-            // Focus or layout can still pull the view to the checkbox; settle on the lead.
-            scroll.postDelayed({ scroll.scrollTo(0, 0) }, 400)
-            scroll.postDelayed({ scroll.scrollTo(0, 0) }, 1000)
-        }
         return true
     }
 
-    private fun post(r: () -> Unit) { host.post { r() } }
+    /** Opens the first-run conversation on the lead (the default rules), not on the checkbox below it. */
+    private fun scrollToLeadWhenLaidOut() {
+        // Wait for the first real layout of the opened drawer: earlier posted scroll-to-bottom
+        // calls ran before it was laid out, and left the lead above the fold.
+        scroll.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+            override fun onGlobalLayout() {
+                if (scroll.height == 0 || messages.height == 0) return
+                scroll.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                scroll.post { scroll.scrollTo(0, 0) }
+            }
+        })
+        // Focus or layout can still pull the view to the checkbox; settle on the lead.
+        scroll.postDelayed({ scroll.scrollTo(0, 0) }, 400)
+        scroll.postDelayed({ scroll.scrollTo(0, 0) }, 1000)
+    }
 
     private fun askStats() {
         val analytics = Analytics.get(activity)
@@ -246,7 +246,12 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
         if (open == expanded) return
         expanded = open
         scroll.visibility = if (open) View.VISIBLE else View.GONE
-        if (open) scroll.post { scroll.fullScroll(ScrollView.FOCUS_DOWN) }
+        if (open) {
+            // CONV-3: the defaults and the first-run questions live in the first
+            // conversation the listener opens; afterwards the drawer opens quiet.
+            if (ensureOnboarding()) scrollToLeadWhenLaidOut()
+            else scroll.post { scroll.fullScroll(ScrollView.FOCUS_DOWN) }
+        }
         else {
             input.clearFocus()
             val imm = activity.getSystemService(android.view.inputmethod.InputMethodManager::class.java)

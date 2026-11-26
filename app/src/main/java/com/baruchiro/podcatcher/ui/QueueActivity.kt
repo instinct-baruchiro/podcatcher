@@ -37,6 +37,7 @@ class QueueActivity : Activity() {
     private lateinit var body: LinearLayout
     private lateinit var status: TextView
     private var controller: com.google.common.util.concurrent.ListenableFuture<MediaController>? = null
+    private var playerBar: PlayerBar? = null
     private val mainExecutor = Executor { r -> android.os.Handler(android.os.Looper.getMainLooper()).post(r) }
 
     private var episodes = mapOf<String, List<Episode>>()
@@ -62,11 +63,15 @@ class QueueActivity : Activity() {
         root.addView(status)
         body = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         root.addView(ScrollView(this).apply { addView(body) }, LinearLayout.LayoutParams(MATCH_PARENT, 0, 1f))
+        val playerHost = android.widget.FrameLayout(this)
+        root.addView(playerHost, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT))
         setContentView(root)
+        playerBar = PlayerBar(this, playerHost)
         loadEpisodes()
     }
 
     override fun onDestroy() {
+        playerBar?.release()
         controller?.let { MediaController.releaseFuture(it) }
         super.onDestroy()
     }

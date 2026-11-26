@@ -30,6 +30,7 @@ class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var listView: ListView
     internal lateinit var conv: ConvPanel
+    private lateinit var playerBar: PlayerBar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,6 +46,7 @@ class MainActivity : Activity() {
             startActivity(Intent(this, AboutActivity::class.java))
         }
         Analytics.get(this).capture("podcatcher_app_open")
+        playerBar = PlayerBar(this, findViewById(R.id.playerHost))
         conv = ConvPanel(this, findViewById(R.id.convHost))
         if (Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -62,6 +64,11 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         render()
+    }
+
+    override fun onDestroy() {
+        if (::playerBar.isInitialized) playerBar.release()
+        super.onDestroy()
     }
 
     private fun say(msg: String) = runOnUiThread {

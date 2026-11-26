@@ -11,4 +11,8 @@
     <item name="queuePlay" type="id" />
     <item name="analyticsSwitch" type="id" />
     <item name="aboutOpen" type="id" />
+    <item name="playerToggle" type="id" />
+    <item name="playerTitle" type="id" />
+    <item name="playerTime" type="id" />
+    <item name="playerProgress" type="id" />
 </resources>
