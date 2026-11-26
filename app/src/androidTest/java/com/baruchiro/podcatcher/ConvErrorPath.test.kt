@@ -24,7 +24,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class ConvErrorPathTest {
 
-    private val pkg = "com.baruchiro.podcatcher"
+    private val pkg = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext.packageName
 
     @Test
     fun invalidKeyProducesHonestErrorBubble() {
