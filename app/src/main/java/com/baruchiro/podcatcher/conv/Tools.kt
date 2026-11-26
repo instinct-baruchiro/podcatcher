@@ -20,14 +20,18 @@ data class Pod(
     val autoDownload: Boolean,
     val keep: Int,
     val speed: Double,
-    val skipIntroSec: Int
+    val skipIntroSec: Int,
+    val priority: Int = 3,
+    val oldestFirst: Boolean = false
 )
 
 data class PolicyPatch(
     val autoDownload: Boolean? = null,
     val keep: Int? = null,
     val speed: Double? = null,
-    val skipIntroSec: Int? = null
+    val skipIntroSec: Int? = null,
+    val priority: Int? = null,
+    val oldestFirst: Boolean? = null
 )
 
 interface Library {
@@ -52,6 +56,7 @@ object Tools {
 - subscribe {"feedUrl": "..."} — רישום מנוי לפי קישור פיד.
 - get_policy {"feedUrl": "..."} או {} — הגדרות של פודקאסט מסוים או ברירות המחדל.
 - set_policy {"feedUrl": "..." (אופציונלי; בלעדיו = ברירת מחדל), "autoDownload": bool, "keep": int, "speed": double, "skipIntroSec": int} — עדכון הגדרות.
+- set_queue_rules {"feedUrl": "..." (חובה), "priority": 1-5 (1 מתנגן ראשון, שווים מתחלפים), "oldestFirst": bool (בתור ההאזנה, פרקים ישנים קודם)} — שינוי כללי תור ההאזנה של פודקאסט, רק לפי בקשת המשתמש.
 """.trimIndent()
 
     fun execute(json: JSONObject, lib: Library): String {
@@ -64,6 +69,7 @@ object Tools {
             "subscribe" -> subscribe(lib, args.optString("feedUrl"))
             "get_policy" -> getPolicy(lib, args.optString("feedUrl").ifEmpty { null })
             "set_policy" -> setPolicy(lib, args)
+            "set_queue_rules" -> setQueueRules(lib, args)
             else -> "לא מכירה את הכלי '$tool'."
         }
     }
@@ -100,6 +106,8 @@ object Tools {
         p.speed?.let { parts.add("מהירות ${it}x") }
         p.skipIntroSec?.let { parts.add("דילוג פתיח $it שניות") }
         p.autoDownload?.let { parts.add(if (it) "הורדה אוטומטית" else "ללא הורדה אוטומטית") }
+        p.priority?.let { parts.add("עדיפות $it") }
+        p.oldestFirst?.let { parts.add(if (it) "בתור: ישנים קודם" else "בתור: חדשים קודם") }
         return parts.joinToString(", ")
     }
 
@@ -110,6 +118,20 @@ object Tools {
         }
         val pod = lib.get(feedUrl) ?: return "אין מנוי עם הקישור הזה."
         return "${pod.title}: " + policyLine(PolicyPatch(pod.autoDownload, pod.keep, pod.speed, pod.skipIntroSec))
+    }
+
+    /** Queue rules change only here, on the listener's request; the app never edits them on its own. */
+    private fun setQueueRules(lib: Library, args: JSONObject): String {
+        val feedUrl = args.optString("feedUrl")
+        val pod = lib.get(feedUrl) ?: return "אין מנוי עם הקישור הזה."
+        val patch = PolicyPatch(
+            priority = if (args.has("priority")) args.getInt("priority") else null,
+            oldestFirst = if (args.has("oldestFirst")) args.getBoolean("oldestFirst") else null
+        )
+        if (patch.priority == null && patch.oldestFirst == null) return "לא התבקש שינוי."
+        if (patch.priority != null && patch.priority !in 1..5) return "עדיפות חייבת להיות בין 1 ל-5."
+        lib.applyPolicy(feedUrl, patch)
+        return "עדכנתי את '${pod.title}': ${policyLine(patch)}."
     }
 
     private fun setPolicy(lib: Library, args: JSONObject): String {

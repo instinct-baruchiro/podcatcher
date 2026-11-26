@@ -208,7 +208,9 @@ automatic next are built. The queue shows up to 15 unplayed episodes per
 podcast taken from the first 50 items of its feed, not the whole archive. An
 episode counts as played only when it finishes; skipping past it leaves it
 unplayed (a provisional choice, no owner statement yet). No removal or manual
-reordering of single episodes.
+reordering of single episodes. The listener can ask the conversation to change
+a podcast's priority or episode order (`set_queue_rules`, verified with a fake
+backend only, not a real model).
 
 Decided by the owner (2026-11-20 voice): strict order between priorities, a
 lower priority plays only after higher ones are exhausted. The rules are fixed
@@ -216,7 +218,7 @@ and deterministic; the listener can ask to change them or reorder, but the app
 never changes them by itself. Exceptions to the rules may come later.
 
 Recorded open choices (unresolved, not settled here):
-- Episode order inside one podcast (newest first or oldest first; newest first is a provisional placeholder, per-podcast setting).
+- Episode order inside one podcast: the owner said (2026-11-20 09:22 voice) it depends on each podcast, no global choice, and asked to leave it for now. It stays a per-podcast setting; newest first is only a placeholder default.
 - Whether skipping an episode should count as played (currently it does not).
 - His Spotify mechanism comments are his hypothesis, not verified fact.
 
@@ -239,3 +241,27 @@ Acceptance:
 - Queue order follows explicit priority + round-robin rules the user can see.
 - Hints may only prompt a question to the user; rule changes require his
   confirmation (future).
+
+## REL-1 — Release gates: usage analytics and stored conversations
+
+<!-- @unimplemented -->
+
+Owner voice, 2026-11-20 09:36: two conditions for publishing the app. Neither
+is built; no real user data is collected until both are settled.
+
+1. Usage analytics, possibly with the same PostHog setup he already uses
+   (Kotlin/Android is supported by the PostHog SDK). Current plan, usage and
+   cost of reusing it are unverified.
+2. Every conversation is stored for oversight and service improvement, in a
+   database that allows investigation. The user sees a clear notice before
+   anything is saved.
+
+Before any real collection: where the data lives, who can read it, how long it
+is kept and how a user's data is deleted must be written down and confirmed by
+the owner. Conversation text is never sent to analytics events, and the
+Gemini key is never stored with a conversation.
+
+Acceptance:
+- No message is stored before the user has seen the notice and agreed.
+- Analytics can be switched off by the user.
+- Storage location, access, retention and deletion are documented.
