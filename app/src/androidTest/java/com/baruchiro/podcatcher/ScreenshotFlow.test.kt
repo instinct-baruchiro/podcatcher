@@ -169,6 +169,7 @@ class ScreenshotFlowTest {
         device.wait(Until.hasObject(res("intake")), 5_000)
 
         // Conversation engine settings: the key is typed on the device, never bundled.
+        device.findObject(By.desc("פתיחת השיחה")).click()
         device.findObject(By.desc("הגדרות מנוע השיחה")).click()
         assertTrue("settings dialog did not open", device.wait(Until.hasObject(By.text("מנוע שיחה")), 5_000))
         shot("01c-conversation-settings")
@@ -225,6 +226,7 @@ class ScreenshotFlowTest {
         shot("04c-player-paused")
         device.findObject(res("playerToggle")).click()
         assertTrue("player bar resume did not restart the session", awaitPlaying(20, "resume"))
+        device.findObject(By.desc("פתיחת השיחה")).click()
         device.findObject(res("convInput")).click()
         Thread.sleep(1_000)
         shot("04b-conversation-while-playing")

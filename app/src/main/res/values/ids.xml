@@ -15,4 +15,5 @@
     <item name="playerTitle" type="id" />
     <item name="playerTime" type="id" />
     <item name="playerProgress" type="id" />
+    <item name="convFab" type="id" />
 </resources>
