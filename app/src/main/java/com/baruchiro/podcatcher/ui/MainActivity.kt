@@ -47,10 +47,23 @@ class MainActivity : Activity() {
             startActivity(Intent(this, AboutActivity::class.java))
         }
         findViewById<ImageButton>(R.id.importOpen).setOnClickListener {
-            startActivityForResult(
-                Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"),
-                REQ_IMPORT
-            )
+            AlertDialog.Builder(this)
+                .setTitle("ייבוא מאפליקציה אחרת")
+                .setMessage(
+                    "מעבירים את המנויים בקובץ OPML:\n\n" +
+                        "1. ב-Podcast Addict: הגדרות, גיבוי, שחזור וסנכרון, ייצוא OPML (מנויים בלבד). שומרים את הקובץ בטלפון.\n" +
+                        "2. באפליקציות אחרות (Pocket Casts, AntennaPod ועוד): מחפשים ייצוא OPML או ייצוא מנויים.\n" +
+                        "3. לוחצים על \"בחירת קובץ\" ובוחרים אותו.\n\n" +
+                        "מועברים המנויים בלבד, עם כללי ברירת המחדל שלך. התקדמות בפרקים, עדיפויות והגדרות לכל פודקאסט לא עוברים, אפשר לשנות אותם בשיחה."
+                )
+                .setPositiveButton("בחירת קובץ") { _, _ ->
+                    startActivityForResult(
+                        Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*"),
+                        REQ_IMPORT
+                    )
+                }
+                .setNegativeButton("ביטול", null)
+                .show()
         }
         Analytics.get(this).capture("podcatcher_app_open")
         playerBar = PlayerBar(this, findViewById(R.id.playerHost))

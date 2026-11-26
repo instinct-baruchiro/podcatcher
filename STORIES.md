@@ -351,7 +351,7 @@ Acceptance:
 Owner WhatsApp, 2026-11-26 16:10: migrate from Podcast Addict so new users can
 switch easily.
 
-Status: tested (OPML parse). Import button on the library screen picks an OPML
+Status: tested (OPML parse). Import button on the library screen first shows in-app steps for exporting the OPML (Podcast Addict and others), then picks an OPML
 subscriptions file (Podcast Addict: Settings, Backup/Restore/Sync, OPML export),
 subscribes to each feed with the user's default rules, and reports added,
 already-present and failed counts. OPML carries subscriptions only: priorities,
