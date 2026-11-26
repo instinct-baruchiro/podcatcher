@@ -20,6 +20,8 @@ class ToolsTest {
         )
         var defaults = PolicyPatch(false, 3, 1.0, 0)
         val subscribed = mutableListOf<String>()
+        var importOpened = false
+        override fun startImport(): Boolean { importOpened = true; return true }
 
         override fun list() = pods.toList()
         override fun findByName(name: String) = pods.firstOrNull { it.title.contains(name) }
@@ -68,6 +70,8 @@ class ToolsTest {
             """{"say":"","tool":"set_queue_rules","args":{"feedUrl":"https://a.example/feed","priority":1,"oldestFirst":true}}"""
         userText.contains("מה יש לי") ->
             """{"say":"","tool":"list_podcasts","args":{}}"""
+        userText.contains("לייבא") ->
+            """{"say":"","tool":"import_subscriptions","args":{}}"""
         userText.contains("חפשי") ->
             """{"say":"","tool":"search_podcasts","args":{"name":"היסטוריה"}}"""
         userText.contains("הירשמי") ->
@@ -77,6 +81,15 @@ class ToolsTest {
 
     private fun turn(lib: Library, userText: String): String =
         Tools.execute(JSONObject(stubModelReply(userText)), lib).text
+
+    @Test
+    fun importRequestOpensTheImportFlowAndExplainsTheExport() {
+        val lib = FakeLibrary()
+        val reply = turn(lib, "לייבא מפודקאסט אדיקט")
+        assertTrue(lib.importOpened)
+        assertTrue(reply.contains("OPML"))
+        assertTrue(reply.contains("בחירת קובץ"))
+    }
 
     @Test
     fun setPolicyPerPodcast() {

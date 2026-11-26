@@ -56,3 +56,8 @@ plain Android views).
 
 Assign the issue → comment the session link → branch `{issue}-{slug}` → PR
 that `Closes #N`. Not active yet: this repo doesn't track issues so far.
+
+## Everything is reachable in the chat (owner rule, 2026-11-26)
+Every user-facing action must also be doable through the conversation. A new button, setting or screen
+needs a chat tool in `conv/Tools.kt`, an entry in `ChatPaths.FEATURES`, and the updated handler count in
+`ChatPaths.UI_HANDLER_COUNTS`. `ChatReachabilityTest` fails otherwise.

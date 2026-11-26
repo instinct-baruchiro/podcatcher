@@ -57,4 +57,38 @@ class AndroidLibrary(private val ctx: Context) : Library {
 
     override fun searchByName(name: String): List<Pair<String, String>> =
         Discovery.search(name).take(5).map { it.title to it.feedUrl }
+
+    override fun startImport(): Boolean {
+        val main = ctx as? com.baruchiro.podcatcher.ui.MainActivity ?: return false
+        main.runOnUiThread { main.showImportHelp() }
+        return true
+    }
+
+    private val main get() = ctx as? com.baruchiro.podcatcher.ui.MainActivity
+
+    override fun removePodcast(feedUrl: String): Boolean {
+        if (Store.podcasts(ctx).none { it.feedUrl == feedUrl }) return false
+        Store.removePodcast(ctx, feedUrl)
+        main?.let { m -> m.runOnUiThread { m.refreshLibrary() } }
+        return true
+    }
+
+    override fun openScreen(screen: String, feedUrl: String?): Boolean {
+        val m = main ?: return false
+        val intent = when (screen) {
+            "queue" -> android.content.Intent(m, com.baruchiro.podcatcher.ui.QueueActivity::class.java)
+            "about" -> android.content.Intent(m, com.baruchiro.podcatcher.ui.AboutActivity::class.java)
+            "podcast" -> android.content.Intent(m, com.baruchiro.podcatcher.ui.PodcastActivity::class.java).putExtra("feedUrl", feedUrl)
+            else -> return false
+        }
+        m.runOnUiThread { m.startActivity(intent) }
+        return true
+    }
+
+    override fun playback(action: String): Boolean = main?.playerCommand(action) ?: false
+
+    override fun setAnalytics(enabled: Boolean): Boolean {
+        com.baruchiro.podcatcher.telemetry.Analytics.get(ctx).enabled = enabled
+        return true
+    }
 }

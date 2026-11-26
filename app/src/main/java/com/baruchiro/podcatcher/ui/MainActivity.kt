@@ -46,7 +46,25 @@ class MainActivity : Activity() {
         findViewById<ImageButton>(R.id.aboutOpen).setOnClickListener {
             startActivity(Intent(this, AboutActivity::class.java))
         }
-        findViewById<ImageButton>(R.id.importOpen).setOnClickListener {
+        findViewById<ImageButton>(R.id.importOpen).setOnClickListener { showImportHelp() }
+        Analytics.get(this).capture("podcatcher_app_open")
+        playerBar = PlayerBar(this, findViewById(R.id.playerHost))
+        conv = ConvPanel(this, findViewById(R.id.convHost))
+        if (Build.VERSION.SDK_INT >= 33 &&
+            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
+        ) {
+            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
+        }
+        FeedRefreshWorker.schedule(this)
+    }
+
+    internal fun refreshLibrary() = render()
+
+    /** Chat-driven player control. Returns false when nothing is loaded. */
+    internal fun playerCommand(action: String): Boolean = playerBar.command(action)
+
+    /** In-app steps for exporting an OPML file, then the file picker. Also opened from the conversation. */
+    internal fun showImportHelp() {
             AlertDialog.Builder(this)
                 .setTitle("ייבוא מאפליקציה אחרת")
                 .setMessage(
@@ -64,16 +82,6 @@ class MainActivity : Activity() {
                 }
                 .setNegativeButton("ביטול", null)
                 .show()
-        }
-        Analytics.get(this).capture("podcatcher_app_open")
-        playerBar = PlayerBar(this, findViewById(R.id.playerHost))
-        conv = ConvPanel(this, findViewById(R.id.convHost))
-        if (Build.VERSION.SDK_INT >= 33 &&
-            checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-        ) {
-            requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 1)
-        }
-        FeedRefreshWorker.schedule(this)
     }
 
     @Deprecated("Result of the OPML file picker")
