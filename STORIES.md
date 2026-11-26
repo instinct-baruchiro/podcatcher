@@ -345,3 +345,19 @@ Acceptance:
 - No message is stored before the user has seen the notice and agreed.
 - Analytics can be switched off by the user.
 - Storage location, access, retention and deletion are documented.
+
+## IMPORT-1 — Move my subscriptions over from another podcast app
+
+Owner WhatsApp, 2026-11-26 16:10: migrate from Podcast Addict so new users can
+switch easily.
+
+Status: tested (OPML parse). Import button on the library screen first shows in-app steps for exporting the OPML (Podcast Addict and others), then picks an OPML
+subscriptions file (Podcast Addict: Settings, Backup/Restore/Sync, OPML export),
+subscribes to each feed with the user's default rules, and reports added,
+already-present and failed counts. OPML carries subscriptions only: priorities,
+progress and per-podcast settings are not imported (Podcast Addict's full
+backup format is undocumented and not parsed).
+
+Acceptance:
+- Every feed link in the file is subscribed once; duplicates and folders are skipped.
+- A feed that fails to load does not stop the rest.
