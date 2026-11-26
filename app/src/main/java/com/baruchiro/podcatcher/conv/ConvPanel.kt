@@ -1,6 +1,8 @@
 package com.baruchiro.podcatcher.conv
 
+import com.baruchiro.podcatcher.telemetry.Analytics
 import com.baruchiro.podcatcher.telemetry.ConversationLog
+import com.baruchiro.podcatcher.data.Store
 
 import android.app.Activity
 import android.app.AlertDialog
@@ -153,7 +155,63 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
         // With the keyboard up there is no room for the page and the drawer
         // together: the conversation takes the whole area above the keyboard.
         activity.window.decorView.viewTreeObserver.addOnGlobalLayoutListener { applyKeyboardMode() }
-        bubble("ספרי לי מה לשנות בהגדרות — למשל כמה פרקים לשמור או באיזה קצב לנגן.", false)
+        if (!maybeOnboard()) bubble("ספרי לי מה לשנות בהגדרות — למשל כמה פרקים לשמור או באיזה קצב לנגן.", false)
+    }
+
+    // ---- First-run chat: shows the default rules in force and the usage-stats choice. Asks no download/keep questions. ----
+
+    private fun maybeOnboard(): Boolean {
+        val due = !prefs.getBoolean("onboarding_done", false) && !onboardingShownThisProcess &&
+            (!Analytics.runningUnderTest() || prefs.getBoolean("onboarding_force", false))
+        if (!due) return false
+        onboardingShownThisProcess = true
+        val d = Store.defaultPolicy(activity)
+        bubble("ברירת מחדל לפודקאסט חדש: " + Tools.essentialRules(d.autoDownload, d.keep, d.oldestFirst) +
+            ". בכל הרשמה אראה מה הוחל, ואפשר לשנות לפודקאסט אחד בלבד. מנויים קיימים לא משתנים.", false)
+        askStats()
+        // Open on the lead (the default rules), not on the checkbox at the bottom.
+        post {
+            setExpanded(true)
+            // Wait for the first real layout of the opened drawer: earlier posted scroll-to-bottom
+            // calls ran before it was laid out, and left the lead above the fold.
+            scroll.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    if (scroll.height == 0 || messages.height == 0) return
+                    scroll.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                    scroll.post { scroll.scrollTo(0, 0) }
+                }
+            })
+            // Focus or layout can still pull the view to the checkbox; settle on the lead.
+            scroll.postDelayed({ scroll.scrollTo(0, 0) }, 400)
+            scroll.postDelayed({ scroll.scrollTo(0, 0) }, 1000)
+        }
+        return true
+    }
+
+    private fun post(r: () -> Unit) { host.post { r() } }
+
+    private fun askStats() {
+        val analytics = Analytics.get(activity)
+        // A choice the listener already made (either way) is kept, never overwritten by the new default.
+        val initial = analytics.enabled
+        bubble("סטטיסטיקות שימוש: נשלחים אירועים כלליים (כמו פתיחת האפליקציה והוספת פודקאסט) עם מזהה אקראי של ההתקנה. לא נשלח תוכן שיחות או שמות פרקים. שירות הניתוח (PostHog) עשוי לשמור גם כתובת IP ומיקום משוער. מסומן כברירת מחדל; אפשר לבטל כאן, או באודות בכל עת.", false)
+        val box = android.widget.CheckBox(activity).apply {
+            text = "שליחת אירועי שימוש"
+            id = R.id.onboardStats
+            isChecked = initial
+            setTextColor(activity.getColor(R.color.textPrimary))
+        }
+        val done = android.widget.Button(activity, null, 0, R.style.PodButton).apply { text = "סיום"; id = R.id.onboardDone }
+        val col = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL; layoutDirection = View.LAYOUT_DIRECTION_RTL
+            addView(box); addView(done) }
+        done.setOnClickListener {
+            box.isEnabled = false; done.isEnabled = false
+            analytics.enabled = box.isChecked
+            prefs.edit().putBoolean("onboarding_done", true).apply()
+            bubble("סטטיסטיקות שימוש " + (if (box.isChecked) "מופעלות" else "כבויות") + ". אפשר לשנות בכל רגע באודות.", false)
+        }
+        messages.addView(col, LinearLayout.LayoutParams(WRAP_CONTENT, WRAP_CONTENT).apply { gravity = Gravity.END; bottomMargin = dp(10) })
+        scroll.post { scroll.fullScroll(ScrollView.FOCUS_DOWN) }
     }
 
     private fun drawerParams(keyboardOpen: Boolean) =
@@ -274,5 +332,6 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
     private companion object {
         const val DEFAULT_MODEL = "gemini-3.1-flash-lite"
         const val DRAWER_HEIGHT = 0.30
+        @Volatile var onboardingShownThisProcess = false
     }
 }

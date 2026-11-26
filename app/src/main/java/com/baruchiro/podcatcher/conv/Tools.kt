@@ -63,6 +63,20 @@ object Tools {
         val tool = json.optString("tool")
         if (tool.isEmpty()) return json.optString("say", "")
         val args = json.optJSONObject("args") ?: JSONObject()
+        val out = run(tool, args, lib)
+        // A follow-up question the model asked next to the action must not vanish: show only its question sentence.
+        val q = lastQuestion(json.optString("say"))
+        return if (q != null && !out.trimEnd().endsWith("?")) out + "\n" + q else out
+    }
+
+    private fun lastQuestion(say: String): String? {
+        val t = say.trim()
+        if (!t.endsWith("?")) return null
+        val start = t.dropLast(1).lastIndexOfAny(charArrayOf('.', '!', '\n', '…')) + 1
+        return t.substring(start).trim().ifEmpty { null }
+    }
+
+    private fun run(tool: String, args: JSONObject, lib: Library): String {
         return when (tool) {
             "list_podcasts" -> listPodcasts(lib)
             "search_podcasts" -> search(lib, args.optString("name"))
@@ -94,11 +108,26 @@ object Tools {
     private fun subscribe(lib: Library, feedUrl: String): String {
         if (!feedUrl.startsWith("http")) return "כדי להירשם אני צריכה קישור פיד מלא."
         return try {
-            "נרשמת ל'${lib.subscribeByUrl(feedUrl)}'."
+            val title = lib.subscribeByUrl(feedUrl)
+            val pod = lib.get(feedUrl)
+            // Read back from the store, never from the model's words: the listener sees the rules actually in force.
+            "נרשמת ל'$title'." + (pod?.let {
+                "\nהכללים שהוחלו (ברירות המחדל שלך): ${essentialRules(it.autoDownload, it.keep, it.oldestFirst)}." +
+                    "\nפרטים נוספים: ${detailRules(it.speed, it.skipIntroSec, it.priority)}." +
+                    "\nאפשר לשנות לפודקאסט הזה בלבד, למשל: \"ישנים קודם בתור\" (מתוך 15 הפרקים האחרונים שלא נשמעו, לא מהפרק הראשון של הפודקאסט), \"תוריד אוטומטית\" או \"שמור 10 פרקים\"."
+            } ?: "")
         } catch (e: Exception) {
             "ההרשמה נכשלה: לא הצלחתי לקרוא את הפיד."
         }
     }
+
+    /** The rules that matter on subscribe: download, retention, queue order. */
+    fun essentialRules(autoDownload: Boolean, keep: Int, oldestFirst: Boolean) =
+        policyLine(PolicyPatch(autoDownload, keep, null, null, null, oldestFirst))
+
+    /** Secondary rules, shown in smaller print on the confirmation. */
+    fun detailRules(speed: Double, skipIntroSec: Int, priority: Int) =
+        policyLine(PolicyPatch(null, null, speed, skipIntroSec, priority, null))
 
     private fun policyLine(p: PolicyPatch): String {
         val parts = mutableListOf<String>()

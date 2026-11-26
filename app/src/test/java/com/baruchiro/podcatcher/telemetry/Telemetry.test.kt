@@ -39,12 +39,13 @@ class TelemetryTest {
     }
 
     @Test
-    fun `analytics sends events without person profiles only while switched on`() {
+    fun `analytics sends events without person profiles only while switched on and after the first-run choice`() {
         MockWebServer().use { server ->
             server.start()
             val analytics = Analytics(MemPrefs(), server.url("/e").toString(), "phc_test", "0.1", "debug")
 
-            assertFalse("analytics must start off", analytics.enabled)
+            assertTrue("default is on (owner decision 2026-11-20)", analytics.enabled)
+            assertFalse("but nothing is sent before the first-run choice is recorded", analytics.asked)
             analytics.capture("podcatcher_app_open")
             analytics.flush()
             assertEquals(0, server.requestCount)

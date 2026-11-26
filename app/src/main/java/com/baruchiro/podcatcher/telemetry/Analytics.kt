@@ -13,7 +13,8 @@ import java.util.concurrent.Executors
  * REL-1 usage analytics: events only (names plus coarse properties, never
  * conversation text or episode content), sent to the owner's existing PostHog project
  * with its public write-only project token. A random per-install id, no person profiles, no identify call. The provider may still store IP and geolocation server-side.
- * Off by default; the listener can switch it on or off in the About screen.
+ * On by default (owner decision 2026-11-20), but nothing is sent until the first-run chat has shown the notice
+ * and recorded an explicit choice; the listener can switch it off there or in the About screen at any time.
  */
 class Analytics(
     private val prefs: android.content.SharedPreferences,
@@ -26,14 +27,17 @@ class Analytics(
     private val io = Executors.newSingleThreadExecutor()
 
     var enabled: Boolean
-        get() = prefs.getBoolean(KEY_ENABLED, false)
+        get() = prefs.getBoolean(KEY_ENABLED, true)
         set(v) { prefs.edit().putBoolean(KEY_ENABLED, v).apply() }
+
+    /** True once the listener has been shown the notice and a choice (either way) is stored. */
+    val asked: Boolean get() = prefs.contains(KEY_ENABLED)
 
     private fun installId(): String =
         prefs.getString(KEY_ID, null) ?: UUID.randomUUID().toString().also { prefs.edit().putString(KEY_ID, it).apply() }
 
     fun capture(event: String, props: Map<String, Any> = emptyMap()) {
-        if (!enabled || endpoint.isBlank()) return
+        if (!asked || !enabled || endpoint.isBlank()) return
         val body = JSONObject()
             .put("api_key", token)
             .put("event", event)
@@ -77,6 +81,8 @@ class Analytics(
                 ).also { shared = it }
             }
         }
+
+        fun runningUnderTest() = underTest()
 
         private fun underTest() = runCatching { Class.forName("androidx.test.platform.app.InstrumentationRegistry") }.isSuccess
     }
