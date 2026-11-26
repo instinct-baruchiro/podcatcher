@@ -52,6 +52,42 @@ interface Library {
     fun subscribeByUrl(feedUrl: String): String
     /** Name search; returns up to 5 (title, feedUrl) candidates for the user to pick from. */
     fun searchByName(name: String): List<Pair<String, String>>
+    /** Opens the in-app import steps (OPML from Podcast Addict etc). False when no screen can show them. */
+    fun startImport(): Boolean = false
+    /** Unsubscribes. False when the feed is not subscribed. */
+    fun removePodcast(feedUrl: String): Boolean = false
+    /** screen: "queue" (listening queue: order, priorities, play), "about", "podcast" (episodes of feedUrl: play, download). */
+    fun openScreen(screen: String, feedUrl: String?): Boolean = false
+    /** action: pause, resume, next, previous. False when nothing is playing or no player is attached. */
+    fun playback(action: String): Boolean = false
+    /** Usage-events switch from the About screen. */
+    fun setAnalytics(enabled: Boolean): Boolean = false
+}
+
+/** Standing rule (owner, 2026-11-26): every user-facing action must be reachable through the chat.
+ *  Each UI action maps to the chat tool that does it. ChatReachabilityTest fails when a screen gains
+ *  actions that are not recorded here, so new features cannot ship without a chat path. */
+object ChatPaths {
+    /** screen file -> (number of click/choice handlers recorded when last audited) */
+    val UI_HANDLER_COUNTS = mapOf(
+        "AboutActivity.kt" to 3, "MainActivity.kt" to 9, "PlayerBar.kt" to 1, "PodcastActivity.kt" to 8, "QueueActivity.kt" to 1
+    )
+    /** UI action -> chat tool. */
+    val FEATURES = mapOf(
+        "add podcast by name or link" to "search_podcasts",
+        "pick a search result" to "subscribe",
+        "open podcast / episodes (play, download)" to "open_screen",
+        "remove podcast" to "remove_podcast",
+        "open listening queue (order, priority, play)" to "open_screen",
+        "open about" to "open_screen",
+        "import subscriptions" to "import_subscriptions",
+        "per-podcast and default settings" to "set_policy",
+        "queue priority and order" to "set_queue_rules",
+        "show current settings" to "get_policy",
+        "list subscriptions" to "list_podcasts",
+        "player pause/resume/next/previous" to "playback",
+        "usage events switch" to "set_analytics"
+    )
 }
 
 object Tools {
@@ -61,6 +97,11 @@ object Tools {
 - list_podcasts {} — רשימת המנויים וההגדרות שלהם.
 - search_podcasts {"name": "..."} — חיפוש פודקאסט לפי שם; מחזיר מועמדים לבחירה.
 - subscribe {"feedUrl": "..."} — רישום מנוי לפי קישור פיד; האישור מציג כרטיס חי עם הכללים שהוחלו, אל תדקלמי אותם בטקסט.
+- import_subscriptions {} — כשהמשתמש רוצה לייבא/להעביר מנויים מאפליקציה אחרת (Podcast Addict, Pocket Casts ועוד): פותח את חלון הייבוא באפליקציה עם השלבים. אל תגידי שאי אפשר לייבא.
+- remove_podcast {"feedUrl": "...", "confirmed": bool} — ביטול מנוי. קודם שאלי את המשתמש לאישור; רק אחרי "כן" מפורש שלחי confirmed=true.
+- open_screen {"screen": "queue"|"about"|"podcast", "feedUrl": "..." (רק ל-podcast)} — פותח מסך: תור ההאזנה (סדר, עדיפויות, ניגון מהתור), אודות, או פרקי פודקאסט (ניגון והורדה של פרק).
+- playback {"action": "pause"|"resume"|"next"|"previous"} — שליטה בנגן.
+- set_analytics {"enabled": bool} — הפעלה או כיבוי של שליחת אירועי שימוש (בלי תוכן שיחה).
 - get_policy {"feedUrl": "..."} או {} — מציג בצ'אט כרטיס חי עם ההגדרות השמורות בפועל של פודקאסט מסוים או של ברירות המחדל. הכרטיס מדבר בעד עצמו — אל תדקלמי את ההגדרות בטקסט.
 - set_policy {"feedUrl": "..." (אופציונלי; בלעדיו = ברירת מחדל), "autoDownload": bool, "keep": int, "speed": double, "skipIntroSec": int} — עדכון הגדרות.
 - set_queue_rules {"feedUrl": "..." (חובה), "priority": 1-5 (1 מתנגן ראשון, שווים מתחלפים), "oldestFirst": bool (בתור ההאזנה, פרקים ישנים קודם)} — שינוי כללי תור ההאזנה של פודקאסט, רק לפי בקשת המשתמש.
@@ -92,8 +133,44 @@ object Tools {
             "get_policy" -> getPolicy(lib, args.optString("feedUrl").ifEmpty { null })
             "set_policy" -> ExecResult(setPolicy(lib, args))
             "set_queue_rules" -> ExecResult(setQueueRules(lib, args))
+            "import_subscriptions" -> ExecResult(importSubscriptions(lib))
+            "remove_podcast" -> ExecResult(removePodcast(lib, args.optString("feedUrl"), args.optBoolean("confirmed", false)))
+            "open_screen" -> ExecResult(openScreen(lib, args.optString("screen"), args.optString("feedUrl").ifEmpty { null }))
+            "playback" -> ExecResult(playback(lib, args.optString("action")))
+            "set_analytics" -> ExecResult(setAnalytics(lib, args.optBoolean("enabled", true)))
             else -> ExecResult("לא מכירה את הכלי '$tool'.")
         }
+    }
+
+    private fun removePodcast(lib: Library, feedUrl: String, confirmed: Boolean): String {
+        val pod = lib.get(feedUrl) ?: return "לא מצאתי מנוי כזה."
+        if (!confirmed) return "להסיר את '${pod.title}' מהמנויים? תאשר ואסיר."
+        return if (lib.removePodcast(feedUrl)) "הסרתי את '${pod.title}'." else "ההסרה לא הצליחה."
+    }
+
+    private fun openScreen(lib: Library, screen: String, feedUrl: String?): String {
+        if (screen !in setOf("queue", "about", "podcast")) return "איזה מסך לפתוח: תור, אודות או פודקאסט?"
+        if (screen == "podcast" && (feedUrl == null || lib.get(feedUrl) == null)) return "איזה פודקאסט לפתוח?"
+        val label = when (screen) { "queue" -> "תור ההאזנה"; "about" -> "אודות"; else -> lib.get(feedUrl!!)!!.title }
+        return if (lib.openScreen(screen, feedUrl)) "פתחתי: $label." else "לא הצלחתי לפתוח את המסך."
+    }
+
+    private fun playback(lib: Library, action: String): String {
+        val label = when (action) { "pause" -> "עצרתי"; "resume" -> "ממשיכה לנגן"; "next" -> "עברתי לפרק הבא"; "previous" -> "חזרתי לפרק הקודם"; else -> return "איזו פעולה: עצירה, המשך, הבא או קודם?" }
+        return if (lib.playback(action)) label else "אין כרגע מה לנגן."
+    }
+
+    private fun setAnalytics(lib: Library, enabled: Boolean): String =
+        if (lib.setAnalytics(enabled)) (if (enabled) "שליחת אירועי השימוש הופעלה (בלי תוכן שיחה)." else "שליחת אירועי השימוש כבויה.")
+        else "לא הצלחתי לשנות את ההגדרה."
+
+    private fun importSubscriptions(lib: Library): String {
+        val opened = lib.startImport()
+        return (if (opened) "פתחתי את חלון הייבוא. " else "") +
+            "ככה מעבירים את המנויים מ-Podcast Addict:\n" +
+            "1. ב-Podcast Addict: הגדרות, גיבוי, שחזור וסנכרון, ייצוא OPML (מנויים בלבד), ושומרים את הקובץ בטלפון.\n" +
+            "2. כאן: לוחצים על \"בחירת קובץ\" בחלון הייבוא ובוחרים את הקובץ.\n" +
+            "עוברים המנויים בלבד; התקדמות, עדיפויות והגדרות לכל פודקאסט לא עוברים, ואפשר לשנות אותם בשיחה."
     }
 
     private fun listPodcasts(lib: Library): String {

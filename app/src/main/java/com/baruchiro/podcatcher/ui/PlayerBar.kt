@@ -136,6 +136,20 @@ class PlayerBar(private val activity: Activity, host: ViewGroup) {
         controller = null
     }
 
+    fun command(action: String): Boolean {
+        val c = controller ?: return false
+        if (c.currentMediaItem == null) return false
+        activity.runOnUiThread {
+            when (action) {
+                "pause" -> c.pause()
+                "resume" -> c.play()
+                "next" -> c.seekToNextMediaItem()
+                "previous" -> c.seekToPreviousMediaItem()
+            }
+        }
+        return true
+    }
+
     private fun onToggle() {
         val c = controller ?: return
         if (c.currentMediaItem == null) return
