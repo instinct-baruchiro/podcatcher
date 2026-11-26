@@ -136,6 +136,28 @@ class PlayerBar(private val activity: Activity, host: ViewGroup) {
         controller = null
     }
 
+    /** Replaces the playlist and plays from [start]. False when the player session is not connected yet. */
+    fun playItems(items: List<MediaItem>, start: Int, skipMs: Long, speed: Float): Boolean {
+        val c = controller ?: return false
+        if (items.isEmpty()) return false
+        activity.runOnUiThread {
+            c.setMediaItems(items, start, skipMs)
+            c.setPlaybackSpeed(speed)
+            c.prepare(); c.play()
+        }
+        return true
+    }
+
+    fun seek(seconds: Int, relative: Boolean): Boolean {
+        val c = controller ?: return false
+        if (c.currentMediaItem == null) return false
+        activity.runOnUiThread {
+            val target = if (relative) c.currentPosition + seconds * 1000L else seconds * 1000L
+            c.seekTo(target.coerceAtLeast(0))
+        }
+        return true
+    }
+
     fun command(action: String): Boolean {
         val c = controller ?: return false
         if (c.currentMediaItem == null) return false

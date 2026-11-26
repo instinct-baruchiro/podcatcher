@@ -152,6 +152,17 @@ object Store {
         return if (f.exists() && f.length() > 0) p else null
     }
 
+    /** Deletes one downloaded episode file and its mapping. False when it was not downloaded. */
+    fun removeDownload(ctx: Context, feedUrl: String, key: String): Boolean {
+        val root = downloadsRoot(ctx)
+        val pod = root.optJSONObject(feedUrl) ?: return false
+        val path = pod.optString(key).ifEmpty { return false }
+        runCatching { File(path).delete() }
+        pod.remove(key)
+        prefs(ctx).edit().putString("downloads", root.toString()).apply()
+        return true
+    }
+
     // Enforces the keep-N policy: deletes files and mappings for episodes that
     // are no longer within the podcast's newest keepGuids.
     fun pruneDownloads(ctx: Context, feedUrl: String, keepGuids: Set<String>) {

@@ -38,6 +38,9 @@ data class PolicyPatch(
  *  policy of feedUrl (null = the defaults), never to the model's words. */
 data class CardSpec(val feedUrl: String?, val title: String)
 
+/** One episode row for chat: n is its position in the feed, 1 = newest. */
+data class EpRow(val n: Int, val title: String, val date: String, val downloaded: Boolean, val played: Boolean)
+
 /** Executor output: what to say, plus an optional live card to render (CONV-2). */
 data class ExecResult(val text: String, val card: CardSpec? = null)
 
@@ -62,6 +65,17 @@ interface Library {
     fun playback(action: String): Boolean = false
     /** Usage-events switch from the About screen. */
     fun setAnalytics(enabled: Boolean): Boolean = false
+    /** Newest-first episodes of a subscribed podcast (null when the feed can't be read). */
+    fun episodes(feedUrl: String, limit: Int): List<EpRow>? = null
+    /** Episode n (1 = newest). Each returns false when the episode or the player is unavailable. */
+    fun playEpisode(feedUrl: String, n: Int): Boolean = false
+    fun downloadEpisode(feedUrl: String, n: Int): Boolean = false
+    fun deleteDownload(feedUrl: String, n: Int): Boolean = false
+    fun markPlayed(feedUrl: String, n: Int): Boolean = false
+    /** Plays the listening queue (QUEUE-1 order) from its first item. */
+    fun playQueue(): Boolean = false
+    /** Seeks the current episode: relative=true moves by seconds (negative = back), else jumps to that second. */
+    fun seek(seconds: Int, relative: Boolean): Boolean = false
 }
 
 /** Standing rule (owner, 2026-11-26): every user-facing action must be reachable through the chat.
@@ -86,7 +100,14 @@ object ChatPaths {
         "show current settings" to "get_policy",
         "list subscriptions" to "list_podcasts",
         "player pause/resume/next/previous" to "playback",
-        "usage events switch" to "set_analytics"
+        "usage events switch" to "set_analytics",
+        "list a podcast's episodes" to "list_episodes",
+        "play an episode" to "play_episode",
+        "download an episode" to "download_episode",
+        "delete a download" to "delete_download",
+        "mark an episode played" to "mark_played",
+        "play the listening queue" to "play_queue",
+        "seek within an episode" to "seek"
     )
 }
 
@@ -100,6 +121,13 @@ object Tools {
 - import_subscriptions {} — כשהמשתמש רוצה לייבא/להעביר מנויים מאפליקציה אחרת (Podcast Addict, Pocket Casts ועוד): פותח את חלון הייבוא באפליקציה עם השלבים. אל תגידי שאי אפשר לייבא.
 - remove_podcast {"feedUrl": "...", "confirmed": bool} — ביטול מנוי. קודם שאלי את המשתמש לאישור; רק אחרי "כן" מפורש שלחי confirmed=true.
 - open_screen {"screen": "queue"|"about"|"podcast", "feedUrl": "..." (רק ל-podcast)} — פותח מסך: תור ההאזנה (סדר, עדיפויות, ניגון מהתור), אודות, או פרקי פודקאסט (ניגון והורדה של פרק).
+- list_episodes {"feedUrl": "...", "limit": 10} — פרקי פודקאסט, מהחדש לישן (מספר 1 = החדש ביותר), עם סימון הורד/הושמע.
+- play_episode {"feedUrl": "...", "number": n} — מנגן פרק לפי המספר מ-list_episodes.
+- download_episode {"feedUrl": "...", "number": n} — הורדת פרק למכשיר.
+- delete_download {"feedUrl": "...", "number": n} — מחיקת ההורדה של פרק.
+- mark_played {"feedUrl": "...", "number": n} — סימון פרק כהושמע (יוצא מהתור).
+- play_queue {} — מנגן את תור ההאזנה מההתחלה (סדר לפי העדיפויות).
+- seek {"seconds": n, "relative": true|false} — מדלג בפרק הנוכחי (relative: קדימה/אחורה בשניות, שלילי = אחורה; אחרת קופץ לשנייה הזו).
 - playback {"action": "pause"|"resume"|"next"|"previous"} — שליטה בנגן.
 - set_analytics {"enabled": bool} — הפעלה או כיבוי של שליחת אירועי שימוש (בלי תוכן שיחה).
 - get_policy {"feedUrl": "..."} או {} — מציג בצ'אט כרטיס חי עם ההגדרות השמורות בפועל של פודקאסט מסוים או של ברירות המחדל. הכרטיס מדבר בעד עצמו — אל תדקלמי את ההגדרות בטקסט.
@@ -137,6 +165,13 @@ object Tools {
             "remove_podcast" -> ExecResult(removePodcast(lib, args.optString("feedUrl"), args.optBoolean("confirmed", false)))
             "open_screen" -> ExecResult(openScreen(lib, args.optString("screen"), args.optString("feedUrl").ifEmpty { null }))
             "playback" -> ExecResult(playback(lib, args.optString("action")))
+            "list_episodes" -> ExecResult(listEpisodes(lib, args.optString("feedUrl"), args.optInt("limit", 10)))
+            "play_episode" -> ExecResult(episodeAction(lib, args, "ננגן", lib::playEpisode))
+            "download_episode" -> ExecResult(episodeAction(lib, args, "מוריד", lib::downloadEpisode))
+            "delete_download" -> ExecResult(episodeAction(lib, args, "מחקתי את ההורדה של", lib::deleteDownload))
+            "mark_played" -> ExecResult(episodeAction(lib, args, "סימנתי כהושמע:", lib::markPlayed))
+            "play_queue" -> ExecResult(if (lib.playQueue()) "מנגן את התור מההתחלה." else "אין מה לנגן בתור או שהנגן לא זמין.")
+            "seek" -> ExecResult(seek(lib, args))
             "set_analytics" -> ExecResult(setAnalytics(lib, args.optBoolean("enabled", true)))
             else -> ExecResult("לא מכירה את הכלי '$tool'.")
         }
@@ -153,6 +188,30 @@ object Tools {
         if (screen == "podcast" && (feedUrl == null || lib.get(feedUrl) == null)) return "איזה פודקאסט לפתוח?"
         val label = when (screen) { "queue" -> "תור ההאזנה"; "about" -> "אודות"; else -> lib.get(feedUrl!!)!!.title }
         return if (lib.openScreen(screen, feedUrl)) "פתחתי: $label." else "לא הצלחתי לפתוח את המסך."
+    }
+
+    private fun listEpisodes(lib: Library, feedUrl: String, limit: Int): String {
+        val pod = lib.get(feedUrl) ?: return "איזה פודקאסט? אני צריכה אחד מהמנויים."
+        val rows = lib.episodes(feedUrl, limit.coerceIn(1, 20)) ?: return "לא הצלחתי לקרוא את הפיד."
+        if (rows.isEmpty()) return "אין פרקים ב'${pod.title}'."
+        return "הפרקים של '${pod.title}' (1 = החדש ביותר):\n" + rows.joinToString("\n") {
+            "${it.n}. ${it.title}${if (it.downloaded) " [הורד]" else ""}${if (it.played) " [הושמע]" else ""}"
+        }
+    }
+
+    private fun episodeAction(lib: Library, args: JSONObject, verb: String, act: (String, Int) -> Boolean): String {
+        val feedUrl = args.optString("feedUrl")
+        val pod = lib.get(feedUrl) ?: return "איזה פודקאסט?"
+        val n = args.optInt("number", 0)
+        if (n < 1) return "איזה פרק? אפשר לבקש קודם את רשימת הפרקים."
+        return if (act(feedUrl, n)) "$verb פרק $n של '${pod.title}'." else "לא הצלחתי: הפרק לא קיים, כבר במצב הזה, או שהנגן לא זמין."
+    }
+
+    private fun seek(lib: Library, args: JSONObject): String {
+        if (!args.has("seconds")) return "כמה שניות לדלג?"
+        val sec = args.optInt("seconds")
+        val relative = args.optBoolean("relative", true)
+        return if (lib.seek(sec, relative)) "עשיתי." else "אין כרגע מה לנגן."
     }
 
     private fun playback(lib: Library, action: String): String {

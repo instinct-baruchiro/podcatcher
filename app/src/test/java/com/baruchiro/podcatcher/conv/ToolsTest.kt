@@ -21,6 +21,9 @@ class ToolsTest {
         var defaults = PolicyPatch(false, 3, 1.0, 0)
         val subscribed = mutableListOf<String>()
         var importOpened = false
+        val played = mutableListOf<Pair<String, Int>>()
+        override fun episodes(feedUrl: String, limit: Int) = listOf(EpRow(1, "פרק חדש", "", false, false), EpRow(2, "פרק ישן", "", true, true))
+        override fun playEpisode(feedUrl: String, n: Int): Boolean { played.add(feedUrl to n); return true }
         override fun startImport(): Boolean { importOpened = true; return true }
 
         override fun list() = pods.toList()
@@ -89,6 +92,15 @@ class ToolsTest {
         assertTrue(lib.importOpened)
         assertTrue(reply.contains("OPML"))
         assertTrue(reply.contains("בחירת קובץ"))
+    }
+
+    @Test
+    fun listsEpisodesAndPlaysOneByNumber() {
+        val lib = FakeLibrary()
+        val list = Tools.execute(JSONObject("""{"tool":"list_episodes","args":{"feedUrl":"https://a.example/feed"}}"""), lib).text
+        assertTrue(list.contains("1. פרק חדש") && list.contains("[הורד]") && list.contains("[הושמע]"))
+        Tools.execute(JSONObject("""{"tool":"play_episode","args":{"feedUrl":"https://a.example/feed","number":2}}"""), lib)
+        assertEquals(listOf("https://a.example/feed" to 2), lib.played)
     }
 
     @Test
