@@ -34,6 +34,13 @@ data class PolicyPatch(
     val oldestFirst: Boolean? = null
 )
 
+/** CONV-2: a live settings card to render in the chat. It binds to the stored
+ *  policy of feedUrl (null = the defaults), never to the model's words. */
+data class CardSpec(val feedUrl: String?, val title: String)
+
+/** Executor output: what to say, plus an optional live card to render (CONV-2). */
+data class ExecResult(val text: String, val card: CardSpec? = null)
+
 interface Library {
     fun list(): List<Pod>
     fun findByName(name: String): Pod?
@@ -53,20 +60,21 @@ object Tools {
 כלים זמינים (המודל מחזיר JSON בלבד):
 - list_podcasts {} — רשימת המנויים וההגדרות שלהם.
 - search_podcasts {"name": "..."} — חיפוש פודקאסט לפי שם; מחזיר מועמדים לבחירה.
-- subscribe {"feedUrl": "..."} — רישום מנוי לפי קישור פיד.
-- get_policy {"feedUrl": "..."} או {} — הגדרות של פודקאסט מסוים או ברירות המחדל.
+- subscribe {"feedUrl": "..."} — רישום מנוי לפי קישור פיד; האישור מציג כרטיס חי עם הכללים שהוחלו, אל תדקלמי אותם בטקסט.
+- get_policy {"feedUrl": "..."} או {} — מציג בצ'אט כרטיס חי עם ההגדרות השמורות בפועל של פודקאסט מסוים או של ברירות המחדל. הכרטיס מדבר בעד עצמו — אל תדקלמי את ההגדרות בטקסט.
 - set_policy {"feedUrl": "..." (אופציונלי; בלעדיו = ברירת מחדל), "autoDownload": bool, "keep": int, "speed": double, "skipIntroSec": int} — עדכון הגדרות.
 - set_queue_rules {"feedUrl": "..." (חובה), "priority": 1-5 (1 מתנגן ראשון, שווים מתחלפים), "oldestFirst": bool (בתור ההאזנה, פרקים ישנים קודם)} — שינוי כללי תור ההאזנה של פודקאסט, רק לפי בקשת המשתמש.
 """.trimIndent()
 
-    fun execute(json: JSONObject, lib: Library): String {
+    fun execute(json: JSONObject, lib: Library): ExecResult {
         val tool = json.optString("tool")
-        if (tool.isEmpty()) return json.optString("say", "")
+        if (tool.isEmpty()) return ExecResult(json.optString("say", ""))
         val args = json.optJSONObject("args") ?: JSONObject()
         val out = run(tool, args, lib)
         // A follow-up question the model asked next to the action must not vanish: show only its question sentence.
         val q = lastQuestion(json.optString("say"))
-        return if (q != null && !out.trimEnd().endsWith("?")) out + "\n" + q else out
+        val text = if (q != null && !out.text.trimEnd().endsWith("?")) out.text + "\n" + q else out.text
+        return ExecResult(text, out.card)
     }
 
     private fun lastQuestion(say: String): String? {
@@ -76,15 +84,15 @@ object Tools {
         return t.substring(start).trim().ifEmpty { null }
     }
 
-    private fun run(tool: String, args: JSONObject, lib: Library): String {
+    private fun run(tool: String, args: JSONObject, lib: Library): ExecResult {
         return when (tool) {
-            "list_podcasts" -> listPodcasts(lib)
-            "search_podcasts" -> search(lib, args.optString("name"))
+            "list_podcasts" -> ExecResult(listPodcasts(lib))
+            "search_podcasts" -> ExecResult(search(lib, args.optString("name")))
             "subscribe" -> subscribe(lib, args.optString("feedUrl"))
             "get_policy" -> getPolicy(lib, args.optString("feedUrl").ifEmpty { null })
-            "set_policy" -> setPolicy(lib, args)
-            "set_queue_rules" -> setQueueRules(lib, args)
-            else -> "לא מכירה את הכלי '$tool'."
+            "set_policy" -> ExecResult(setPolicy(lib, args))
+            "set_queue_rules" -> ExecResult(setQueueRules(lib, args))
+            else -> ExecResult("לא מכירה את הכלי '$tool'.")
         }
     }
 
@@ -105,19 +113,18 @@ object Tools {
             "\nאיזה מהם?"
     }
 
-    private fun subscribe(lib: Library, feedUrl: String): String {
-        if (!feedUrl.startsWith("http")) return "כדי להירשם אני צריכה קישור פיד מלא."
+    private fun subscribe(lib: Library, feedUrl: String): ExecResult {
+        if (!feedUrl.startsWith("http")) return ExecResult("כדי להירשם אני צריכה קישור פיד מלא.")
         return try {
             val title = lib.subscribeByUrl(feedUrl)
             val pod = lib.get(feedUrl)
-            // Read back from the store, never from the model's words: the listener sees the rules actually in force.
-            "נרשמת ל'$title'." + (pod?.let {
-                "\nהכללים שהוחלו (ברירות המחדל שלך): ${essentialRules(it.autoDownload, it.keep, it.oldestFirst)}." +
-                    "\nפרטים נוספים: ${detailRules(it.speed, it.skipIntroSec, it.priority)}." +
-                    "\nאפשר לשנות לפודקאסט הזה בלבד, למשל: \"ישנים קודם בתור\" (מתוך 15 הפרקים האחרונים שלא נשמעו, לא מהפרק הראשון של הפודקאסט), \"תוריד אוטומטית\" או \"שמור 10 פרקים\"."
-            } ?: "")
+            // CONV-2: the stored rules show on a live card, read back from the store, never recited from the model's words.
+            if (pod != null) ExecResult(
+                "נרשמת ל'$title'.\nהכללים שהוחלו מוצגים על הכרטיס — אפשר לשנות עליו או במילים, לפודקאסט הזה בלבד (למשל \"ישנים קודם בתור\" — מתוך 15 הפרקים האחרונים שלא נשמעו, לא מהפרק הראשון של הפודקאסט).",
+                CardSpec(feedUrl, pod.title)
+            ) else ExecResult("נרשמת ל'$title'.")
         } catch (e: Exception) {
-            "ההרשמה נכשלה: לא הצלחתי לקרוא את הפיד."
+            ExecResult("ההרשמה נכשלה: לא הצלחתי לקרוא את הפיד.")
         }
     }
 
@@ -125,9 +132,13 @@ object Tools {
     fun essentialRules(autoDownload: Boolean, keep: Int, oldestFirst: Boolean) =
         policyLine(PolicyPatch(autoDownload, keep, null, null, null, oldestFirst))
 
-    /** Secondary rules, shown in smaller print on the confirmation. */
-    fun detailRules(speed: Double, skipIntroSec: Int, priority: Int) =
-        policyLine(PolicyPatch(null, null, speed, skipIntroSec, priority, null))
+    /** DL-3 keep choices the card stepper walks through (CONV-2). */
+    val KEEP_STEPS = intArrayOf(1, 3, 5, 10)
+
+    /** The next keep choice in direction dir (+1/-1), clamped at the ends. */
+    fun nextKeepStep(current: Int, dir: Int): Int =
+        if (dir > 0) KEEP_STEPS.firstOrNull { it > current } ?: current
+        else KEEP_STEPS.lastOrNull { it < current } ?: current
 
     private fun policyLine(p: PolicyPatch): String {
         val parts = mutableListOf<String>()
@@ -140,13 +151,18 @@ object Tools {
         return parts.joinToString(", ")
     }
 
-    private fun getPolicy(lib: Library, feedUrl: String?): String {
+    private fun getPolicy(lib: Library, feedUrl: String?): ExecResult {
         if (feedUrl == null) {
-            val d = lib.defaultPolicy()
-            return "ברירות המחדל: " + (policyLine(d).ifEmpty { "שמירת 3 פרקים, מהירות 1x" })
+            return ExecResult(
+                "ברירות המחדל מוצגות על הכרטיס — אפשר לשנות עליו או במילים.",
+                CardSpec(null, "ברירת מחדל לפודקאסט חדש")
+            )
         }
-        val pod = lib.get(feedUrl) ?: return "אין מנוי עם הקישור הזה."
-        return "${pod.title}: " + policyLine(PolicyPatch(pod.autoDownload, pod.keep, pod.speed, pod.skipIntroSec))
+        val pod = lib.get(feedUrl) ?: return ExecResult("אין מנוי עם הקישור הזה.")
+        return ExecResult(
+            "ההגדרות של '${pod.title}' מוצגות על הכרטיס — אפשר לשנות עליו או במילים.",
+            CardSpec(feedUrl, pod.title)
+        )
     }
 
     /** Queue rules change only here, on the listener's request; the app never edits them on its own. */

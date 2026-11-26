@@ -192,6 +192,29 @@ honestly that no engine is attached. Playback intentionally stays
 button-driven (owner direction).
 
 <!-- @unimplemented -->
+## CONV-2 — Live settings card inside the conversation
+
+As a listener, when the conversation shows me a podcast's or the default
+rules — after subscribing or when I ask — I want them on a small live card in
+the chat instead of a paragraph that recites them, so that I can see the
+actual state and change it right there or in words.
+
+Owner voice, 2026-11-21 19:20: "זה צריך להיות לא טקסט אלא קומפוננטה קטנה...
+המשתמש יוכל או לקנפג בתוך הקומפוננטה הזאת או פשוט לבקש שינויים בקומפוננטה".
+
+Status: implemented. The subscribe confirmation and the policy answers render
+a card bound to the stored policy (keep-N stepper over DL-3's choices 1/3/5/10,
+auto-download toggle, and a secondary read-only line with speed, skip, priority
+and queue order). Card edits write to the store directly; a conversational
+change re-renders every visible card to the stored state. Queue order, speed
+and skip stay word-driven.
+
+Acceptance:
+- Subscribe confirmation and policy answers render the rules as a live card
+  bound to stored state, not a reciting paragraph.
+- Card edits (keep-N stepper, auto-download toggle) write through to the store.
+- A conversational set_policy updates the visible cards to the new state.
+
 ## QUEUE-1 — Deterministic listening queue (future) and starvation hints
 
 As a listener, I want a listening queue built on clear deterministic rules —
@@ -255,7 +278,9 @@ the choice (preselected, can be unchecked there); an earlier opt-out is kept.
 The same first-run chat states the default rules in force (no download or
 retention questions; the owner accepts product-chosen defaults at 14:26) and
 subscribing reads back the rules actually stored plus how to change them for
-one podcast. The About screen credits Baruch Odem. The
+one podcast (since 2026-11-21 19:20, by the owner's instruction, the readback
+is the live card of CONV-2, not a reciting paragraph). The About screen
+credits Baruch Odem. The
 conversation notice, consent and delete client exist but store nothing: no
 server is deployed, so the app contacts none. Deploying a storage relay, its
 account and any key placement are not approved. No real conversation data is

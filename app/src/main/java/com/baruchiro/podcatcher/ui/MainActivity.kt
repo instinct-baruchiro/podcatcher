@@ -29,7 +29,7 @@ class MainActivity : Activity() {
     private lateinit var input: EditText
     private lateinit var status: TextView
     private lateinit var listView: ListView
-    private lateinit var conv: ConvPanel
+    internal lateinit var conv: ConvPanel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

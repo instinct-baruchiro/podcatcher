@@ -47,7 +47,7 @@ class RealGeminiRobolectricTest {
         val evidence = StringBuilder()
         evidence.append("ASK: $ask\nMODEL_RAW: $raw\n")
 
-        val confirmation = Tools.execute(JSONObject(raw), lib)
+        val confirmation = Tools.execute(JSONObject(raw), lib).text
         evidence.append("EXECUTOR_CONFIRMATION: $confirmation\n")
 
         // Simulated restart: fresh read of persisted state from the store.
@@ -84,7 +84,7 @@ class RealGeminiRobolectricTest {
         for (user in listOf("הוסף פודקאסט מסילת ישרים הרב הלל", "1")) {
             history.add(ConvMessage(true, user))
             val raw = backend.reply(history, Tools.SPEC)
-            last = Tools.execute(JSONObject(raw), lib)
+            last = Tools.execute(JSONObject(raw), lib).text
             history.add(ConvMessage(false, last))
             evidence.append("USER: $user\nMODEL_RAW: $raw\nCONFIRMATION: $last\n")
         }
@@ -93,7 +93,7 @@ class RealGeminiRobolectricTest {
         val second = "תוריד אוטומטית רק את הפודקאסט הזה"
         history.add(ConvMessage(true, second))
         val raw2 = backend.reply(history, Tools.SPEC)
-        val conf2 = Tools.execute(JSONObject(raw2), lib)
+        val conf2 = Tools.execute(JSONObject(raw2), lib).text
         evidence.append("USER: $second\nMODEL_RAW: $raw2\nCONFIRMATION: $conf2\n")
         val after = Store.podcasts(c)
         val newOne = after.first { it.feedUrl == stored!!.feedUrl }.policy

@@ -86,7 +86,7 @@ class ConvSliceTest {
             .put("tool", "set_policy")
             .put("args", JSONObject().put("feedUrl", feedUrl).put("keep", 3))
 
-        val confirmation = Tools.execute(json, lib)
+        val confirmation = Tools.execute(json, lib).text
         assertTrue("confirmation should name the podcast: $confirmation", confirmation.contains("פודקאסט בדיקה"))
 
         // Fresh read from storage = the state visible after an app restart.

@@ -1,4 +1,4 @@
-// @story: CONV-1, QUEUE-1
+// @story: CONV-1, CONV-2, QUEUE-1
 package com.baruchiro.podcatcher.conv
 
 import org.json.JSONObject
@@ -76,7 +76,7 @@ class ToolsTest {
     }
 
     private fun turn(lib: Library, userText: String): String =
-        Tools.execute(JSONObject(stubModelReply(userText)), lib)
+        Tools.execute(JSONObject(stubModelReply(userText)), lib).text
 
     @Test
     fun setPolicyPerPodcast() {
@@ -99,7 +99,7 @@ class ToolsTest {
 
         val tooHigh = Tools.execute(JSONObject("""{"tool":"set_queue_rules","args":{"feedUrl":"https://a.example/feed","priority":9}}"""), lib)
         assertEquals(1, lib.get("https://a.example/feed")!!.priority)
-        assertTrue(tooHigh.contains("בין 1 ל-5"))
+        assertTrue(tooHigh.text.contains("בין 1 ל-5"))
     }
 
     @Test
@@ -138,15 +138,49 @@ class ToolsTest {
     @Test
     fun subscribeByUrl() {
         val lib = FakeLibrary()
-        val reply = turn(lib, "הירשמי לפודקאסט בקישור הזה")
+        val result = Tools.execute(JSONObject(stubModelReply("הירשמי לפודקאסט בקישור הזה")), lib)
         assertTrue(lib.subscribed.contains("https://c.example/feed"))
-        assertTrue(reply.contains("נרשמת"))
-        // The confirmation states the rules actually stored for the new podcast, not only that it subscribed.
-        assertTrue(reply, reply.contains("שמירת 3 פרקים") && reply.contains("ללא הורדה אוטומטית") && reply.contains("חדשים קודם"))
-        assertTrue("per-podcast change hint missing: $reply", reply.contains("לפודקאסט הזה בלבד") && !reply.contains("ישנים קודם בתור\" להתחיל"))
+        assertTrue(result.text.contains("נרשמת"))
+        // CONV-2: the stored rules render as a live card bound to the new podcast, not a recited paragraph.
+        assertEquals(CardSpec("https://c.example/feed", "פודקאסט חדש"), result.card)
+        assertTrue(result.text, !result.text.contains("שמירת 3 פרקים"))
+        assertTrue("per-podcast change hint missing: ${result.text}", result.text.contains("לפודקאסט הזה בלבד"))
         // A follow-up question the model asked next to the action is not dropped; its confirmation claim is not echoed.
         val asked = Tools.execute(JSONObject("""{"say":"נרשמתי בהצלחה. האם תרצה שאוריד פרקים?","tool":"subscribe","args":{"feedUrl":"https://d.example/feed"}}"""), lib)
-        assertTrue(asked, asked.trimEnd().endsWith("האם תרצה שאוריד פרקים?") && !asked.contains("נרשמתי בהצלחה"))
+        assertTrue(asked.text, asked.text.trimEnd().endsWith("האם תרצה שאוריד פרקים?") && !asked.text.contains("נרשמתי בהצלחה"))
+    }
+
+    @Test
+    fun policyAnswersCarryLiveCard() {
+        val lib = FakeLibrary()
+        // Asking for a podcast's settings returns the live card, not a recited paragraph.
+        val pod = Tools.execute(JSONObject("""{"tool":"get_policy","args":{"feedUrl":"https://a.example/feed"}}"""), lib)
+        assertEquals(CardSpec("https://a.example/feed", "עושים היסטוריה"), pod.card)
+        assertTrue(pod.text, !pod.text.contains("שמירת"))
+        // Same for the defaults.
+        val defaults = Tools.execute(JSONObject("""{"tool":"get_policy","args":{}}"""), lib)
+        assertEquals(CardSpec(null, "ברירת מחדל לפודקאסט חדש"), defaults.card)
+        // A change in words carries no new card: visible cards rebind to the stored state.
+        val change = Tools.execute(JSONObject("""{"tool":"set_policy","args":{"feedUrl":"https://a.example/feed","keep":5}}"""), lib)
+        assertEquals(null, change.card)
+        assertEquals(5, lib.get("https://a.example/feed")!!.keep)
+        // An unknown podcast is an honest error, no card.
+        val missing = Tools.execute(JSONObject("""{"tool":"get_policy","args":{"feedUrl":"https://nope.example/feed"}}"""), lib)
+        assertEquals(null, missing.card)
+        assertTrue(missing.text.contains("אין מנוי"))
+    }
+
+    @Test
+    fun keepStepperWalksTheStoryChoices() {
+        assertEquals(3, Tools.nextKeepStep(1, +1))
+        assertEquals(5, Tools.nextKeepStep(3, +1))
+        assertEquals(10, Tools.nextKeepStep(5, +1))
+        assertEquals(10, Tools.nextKeepStep(10, +1)) // clamps at the top
+        assertEquals(5, Tools.nextKeepStep(10, -1))
+        assertEquals(1, Tools.nextKeepStep(3, -1))
+        assertEquals(1, Tools.nextKeepStep(1, -1))  // clamps at the bottom
+        assertEquals(10, Tools.nextKeepStep(50, -1)) // a word-set value steps to the nearest choice
+        assertEquals(1, Tools.nextKeepStep(0, +1))
     }
 
     @Test
@@ -154,7 +188,7 @@ class ToolsTest {
         val lib = FakeLibrary()
         val reply = Tools.execute(
             JSONObject("""{"tool":"set_policy","args":{"feedUrl":"https://a.example/feed","keep":500}}"""), lib)
-        assertTrue(reply.contains("בין 1 ל-50"))
+        assertTrue(reply.text.contains("בין 1 ל-50"))
         assertEquals(3, lib.get("https://a.example/feed")!!.keep)
     }
 
@@ -163,14 +197,14 @@ class ToolsTest {
         val lib = FakeLibrary()
         val reply = Tools.execute(
             JSONObject("""{"tool":"set_policy","args":{"feedUrl":"https://nope.example/feed","keep":5}}"""), lib)
-        assertTrue(reply.contains("אין מנוי"))
+        assertTrue(reply.text.contains("אין מנוי"))
     }
 
     @Test
     fun unknownToolRejected() {
         val lib = FakeLibrary()
         val reply = Tools.execute(JSONObject("""{"tool":"delete_everything","args":{}}"""), lib)
-        assertTrue(reply.contains("לא מכירה"))
+        assertTrue(reply.text.contains("לא מכירה"))
     }
 
     @Test

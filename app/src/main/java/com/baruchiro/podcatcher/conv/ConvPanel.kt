@@ -15,6 +15,8 @@ import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
 import android.view.inputmethod.EditorInfo
+import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageButton
@@ -320,13 +322,162 @@ class ConvPanel(private val activity: Activity, hostView: ViewGroup) {
             val json = runCatching { JSONObject(raw) }.getOrElse {
                 JSONObject().put("say", "התקבלה תשובה לא תקינה מהמנוע.")
             }
-            val confirmation = withContext(Dispatchers.IO) { Tools.execute(json, lib) }
-            if (confirmation.isNotBlank()) {
-                history.add(ConvMessage(false, confirmation))
-                bubble(confirmation, false)
-                store("app", confirmation)
+            val result = withContext(Dispatchers.IO) { Tools.execute(json, lib) }
+            renderResult(result)
+        }
+    }
+
+    private fun renderResult(result: ExecResult) {
+        if (result.text.isBlank() && result.card == null) return
+        setExpanded(true)
+        if (result.text.isNotBlank()) {
+            history.add(ConvMessage(false, result.text))
+            bubble(result.text, false)
+            store("app", result.text)
+        }
+        result.card?.let { addPolicyCard(it) }
+        // A change made in words re-renders every visible card to the stored state (CONV-2).
+        rebindCards()
+    }
+
+    /** androidTest entry: runs the same execute→render path a real backend reply takes. */
+    internal fun renderModelOutputForTest(raw: JSONObject) {
+        scope.launch {
+            val result = withContext(Dispatchers.IO) { Tools.execute(raw, lib) }
+            renderResult(result)
+        }
+    }
+
+    // ---- CONV-2 live policy card: the stored settings as a small editable component, not a reciting paragraph. ----
+
+    private data class CardBinding(
+        val spec: CardSpec,
+        val keepValue: TextView,
+        val autoBox: CheckBox,
+        val detail: TextView,
+        var updating: Boolean = false
+    )
+
+    private val cards = mutableListOf<CardBinding>()
+
+    private fun cardLabel(text: String) = TextView(activity).apply {
+        this.text = text
+        textSize = 15f
+        setTextColor(activity.getColor(R.color.textPrimary))
+    }
+
+    private fun addPolicyCard(spec: CardSpec) {
+        val card = LinearLayout(activity).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutDirection = View.LAYOUT_DIRECTION_RTL
+            background = activity.getDrawable(R.drawable.bg_card)
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+        }
+        card.addView(TextView(activity).apply {
+            text = spec.title
+            textSize = 15f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(activity.getColor(R.color.textPrimary))
+        })
+        val keepValue = TextView(activity).apply {
+            id = R.id.cardKeepValue
+            textSize = 15f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(activity.getColor(R.color.textPrimary))
+            gravity = Gravity.CENTER
+        }
+        val autoBox = CheckBox(activity).apply { id = R.id.cardAuto }
+        val detail = TextView(activity).apply {
+            textSize = 13f
+            setTextColor(activity.getColor(R.color.textSecondary))
+        }
+        val binding = CardBinding(spec, keepValue, autoBox, detail)
+
+        fun stepButton(mark: String, idRes: Int, descPrefix: String) = Button(activity, null, 0, R.style.PodButton_Tonal).apply {
+            text = mark
+            id = idRes
+            textSize = 18f
+            minWidth = 0
+            setPadding(dp(16), dp(2), dp(16), dp(2))
+            contentDescription = descPrefix + spec.title
+        }
+        val minus = stepButton("−", R.id.cardKeepMinus, "הפחת שמירה ")
+        val plus = stepButton("+", R.id.cardKeepPlus, "הוסף שמירה ")
+        minus.setOnClickListener { stepKeep(binding, -1) }
+        plus.setOnClickListener { stepKeep(binding, +1) }
+
+        val keepRow = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        keepRow.addView(cardLabel("שמירת פרקים"), LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        keepRow.addView(minus)
+        keepRow.addView(keepValue, LinearLayout.LayoutParams(dp(40), WRAP_CONTENT))
+        keepRow.addView(plus)
+
+        val autoRow = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        autoRow.addView(cardLabel("הורדה אוטומטית"), LinearLayout.LayoutParams(0, WRAP_CONTENT, 1f))
+        autoRow.addView(autoBox)
+        autoBox.setOnCheckedChangeListener { _, checked ->
+            if (binding.updating) return@setOnCheckedChangeListener
+            scope.launch {
+                withContext(Dispatchers.IO) { lib.applyPolicy(spec.feedUrl, PolicyPatch(autoDownload = checked)) }
+                rebindCards()
             }
         }
+
+        card.addView(keepRow, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(6) })
+        card.addView(autoRow)
+        card.addView(detail, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { topMargin = dp(6) })
+
+        cards.add(binding)
+        messages.addView(card, LinearLayout.LayoutParams(MATCH_PARENT, WRAP_CONTENT).apply { bottomMargin = dp(10) })
+        bindCard(binding)
+        scroll.post { scroll.fullScroll(ScrollView.FOCUS_DOWN) }
+    }
+
+    private fun stepKeep(b: CardBinding, dir: Int) {
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                val current = if (b.spec.feedUrl == null) lib.defaultPolicy().keep
+                    else lib.get(b.spec.feedUrl)?.keep
+                if (current != null) {
+                    val next = Tools.nextKeepStep(current, dir)
+                    if (next != current) lib.applyPolicy(b.spec.feedUrl, PolicyPatch(keep = next))
+                }
+            }
+            rebindCards()
+        }
+    }
+
+    private fun rebindCards() = cards.forEach { bindCard(it) }
+
+    /** Binds a card to the stored policy — the same state the rest of the app sees. */
+    private fun bindCard(b: CardBinding) {
+        val auto: Boolean
+        val keep: Int
+        val detailText: String
+        if (b.spec.feedUrl == null) {
+            val d = lib.defaultPolicy()
+            auto = d.autoDownload ?: false
+            keep = d.keep ?: 3
+            detailText = "מהירות ${d.speed ?: 1.0}x · דילוג פתיח ${d.skipIntroSec ?: 0} שניות"
+        } else {
+            val pod = lib.get(b.spec.feedUrl)
+            if (pod == null) { b.detail.text = "המנוי הוסר"; return }
+            auto = pod.autoDownload
+            keep = pod.keep
+            detailText = "מהירות ${pod.speed}x · דילוג פתיח ${pod.skipIntroSec} שניות · עדיפות ${pod.priority} · " +
+                (if (pod.oldestFirst) "בתור: ישנים קודם" else "בתור: חדשים קודם")
+        }
+        b.updating = true
+        b.keepValue.text = keep.toString()
+        b.autoBox.isChecked = auto
+        b.detail.text = detailText
+        b.updating = false
     }
 
     private companion object {

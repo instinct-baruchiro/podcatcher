@@ -11,8 +11,8 @@ android {
         applicationId = "com.baruchiro.podcatcher.next"
         minSdk = 26
         targetSdk = 34
-        versionCode = 4
-        versionName = "0.4-trial-chat"
+        versionCode = 5
+        versionName = "0.5-conv-card"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -72,6 +72,7 @@ dependencies {
     testImplementation("org.robolectric:robolectric:4.12.2")
     testImplementation("net.sf.kxml:kxml2:2.3.0")
 
+    androidTestImplementation("androidx.test:core:1.6.1")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test.uiautomator:uiautomator:2.3.0")
